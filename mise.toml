@@ -1,0 +1,43 @@
+[tools]
+go = "1.26.5"
+pinact = "4.1.0"
+
+[tasks."deps:actions:update"]
+description = "Update GitHub Actions references"
+run = "pinact run -u"
+
+[tasks."deps:actions:check"]
+description = "Verify GitHub Actions references"
+run = "pinact run --check --verify-comment"
+
+[tasks."deps:go:update"]
+description = "Update Go module dependencies"
+run = """
+go get -u all
+go mod tidy
+"""
+
+[tasks."licenses:update"]
+description = "Regenerate third-party license notices for the darwin/arm64 release target"
+run = "./script/licenses.sh save --ignore github.com/ishinova/gh-user-attachments --save_path third_party_licenses --force ."
+
+[tasks."licenses:check"]
+description = "Verify dependency license types and third_party_licenses freshness"
+run = """
+./script/licenses.sh check --ignore github.com/ishinova/gh-user-attachments .
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+./script/licenses.sh save --ignore github.com/ishinova/gh-user-attachments --save_path "$tmpdir/licenses" .
+diff -r "$tmpdir/licenses" third_party_licenses
+"""
+
+[tasks.check]
+description = "Run formatting, dependency, license, test, vet, and release build checks"
+depends = ["licenses:check"]
+run = """
+test -z "$(gofmt -l .)"
+go mod verify
+go test -race ./...
+go vet ./...
+./script/build.sh v0.0.0-check
+"""

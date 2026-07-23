@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub User Attachments"
+  short_description: "Upload 2–10 supported files and return their GitHub attachment URLs"
+  default_prompt: "Use $gh-user-attachments to upload these 2–10 supported local files as one batch and return the finalized GitHub user-attachment URLs in input order."

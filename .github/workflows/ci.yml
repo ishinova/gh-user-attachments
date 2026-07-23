@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: test -z "$(gofmt -l .)"
+      - run: go mod verify
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: ./script/licenses.sh check --ignore github.com/ishinova/gh-user-attachments .
+      - run: |
+          tmpdir="$(mktemp -d)"
+          ./script/licenses.sh save --ignore github.com/ishinova/gh-user-attachments --save_path "$tmpdir/licenses" .
+          diff -r "$tmpdir/licenses" third_party_licenses
+      - run: CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -buildvcs=false -o /tmp/gh-user-attachments .

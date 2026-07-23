@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "repository": "ishinova/gh-user-attachments",
+  "tag": "v1.0.0",
+  "command": "gh user-attachments",
+  "versionOutput": "gh-user-attachments 1.0.0"
+}
