@@ -11,15 +11,31 @@
 
 ## インストール
 
-本リポジトリの明示的に承認されたリリースリリースタグを指定してインストールします。
+### GitHub CLI エクステンション
+
+最新リリース、または承認されたリリースリリースタグを指定してインストールします。
 
 ```bash
 gh auth status --hostname github.com
-gh extension install ishinova/gh-user-attachments --pin <APPROVED_TAG>
+gh extension install ishinova/gh-user-attachments
 gh user-attachments --version
 ```
 
+特定のリリースタグに固定してインストールする場合：
+
+```bash
+gh extension install ishinova/gh-user-attachments --pin <APPROVED_TAG>
+```
+
 リリースは Native macOS arm64 を対象としています。ソースから試す場合は、このディレクトリで `go run .` を実行してください。
+
+### Agent スキルのインストール
+
+AI コーディングアシスタント向けの Agent スキルを `skills` CLI を使用してインストールする場合：
+
+```bash
+npx skills add ishinova/gh-user-attachments/skills/gh-user-attachments
+```
 
 ## Web セッションの準備
 
