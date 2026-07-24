@@ -20,16 +20,32 @@ validation details and the guarantee boundary.
 
 ## Installation
 
-Install with an explicitly approved release tag of this repository.
+### GitHub CLI Extension
+
+Install with an explicitly approved release tag or the latest release of this repository:
 
 ```bash
 gh auth status --hostname github.com
-gh extension install ishinova/gh-user-attachments --pin <APPROVED_TAG>
+gh extension install ishinova/gh-user-attachments
 gh user-attachments --version
+```
+
+To pin to a specific release tag:
+
+```bash
+gh extension install ishinova/gh-user-attachments --pin <APPROVED_TAG>
 ```
 
 Releases target native macOS arm64. To try from source, run `go run .` in this
 directory.
+
+### Agent Skill Installation
+
+To install the agent skill for AI coding assistants using `skills`:
+
+```bash
+npx skills add ishinova/gh-user-attachments/skills/gh-user-attachments
+```
 
 ## Preparing the web session
 

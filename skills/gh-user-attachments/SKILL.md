@@ -15,7 +15,11 @@ gh user-attachments upload --help
 gh user-attachments auth --help
 ```
 
-If either command missing, stop, report extension as dependency blocker. Do not install, reinstall, downgrade it.
+If either command is missing, report the extension dependency blocker and guide the user (or obtain approval) to install it:
+
+```bash
+gh extension install ishinova/gh-user-attachments
+```
 
 2. Run:
 
