@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Run workflow, formatting, dependency, license, test, vet, and release build checks"
+set -euo pipefail
+
+actionlint
+pinact run --fix=false --no-api
+test -z "$(gofmt -l .)"
+go mod verify
+go test -race ./...
+go vet ./...
+.mise/tasks/licenses/check
+.mise/tasks/release/build v0.0.0-check

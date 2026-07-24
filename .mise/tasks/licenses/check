@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#MISE description="Verify dependency license types and third_party_licenses freshness"
+set -euo pipefail
+
+# Build the tool for the host before applying the release target environment.
+# `go tool` and `go run` would otherwise cross-compile an unusable executable.
+bindir="$(mktemp -d)"
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$bindir" "$tmpdir"' EXIT
+
+go build -o "${bindir}/go-licenses" github.com/google/go-licenses/v2
+GOOS=darwin GOARCH=arm64 "${bindir}/go-licenses" \
+  check \
+  --ignore github.com/ishinova/gh-user-attachments \
+  .
+GOOS=darwin GOARCH=arm64 "${bindir}/go-licenses" \
+  save \
+  --ignore github.com/ishinova/gh-user-attachments \
+  --save_path "${tmpdir}/licenses" \
+  .
+diff -r "${tmpdir}/licenses" third_party_licenses

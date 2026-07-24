@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate third-party license notices for the darwin/arm64 release target"
+set -euo pipefail
+
+# Build the tool for the host before applying the release target environment.
+# `go tool` and `go run` would otherwise cross-compile an unusable executable.
+bindir="$(mktemp -d)"
+trap 'rm -rf "$bindir"' EXIT
+
+go build -o "${bindir}/go-licenses" github.com/google/go-licenses/v2
+GOOS=darwin GOARCH=arm64 "${bindir}/go-licenses" \
+  save \
+  --ignore github.com/ishinova/gh-user-attachments \
+  --save_path third_party_licenses \
+  --force \
+  .
