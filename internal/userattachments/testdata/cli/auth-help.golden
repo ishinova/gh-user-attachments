@@ -1,0 +1,9 @@
+$ gh-user-attachments auth --help
+exit 0
+--- stdout (empty) ---
+--- stderr ---
+Manage the GitHub web session used for native attachment upload.
+Usage:
+  gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
+  gh-user-attachments auth status           Show whether a usable session is configured
+  gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue

@@ -1,0 +1,8 @@
+$ gh-user-attachments --help
+exit 0
+--- stdout (empty) ---
+--- stderr ---
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>

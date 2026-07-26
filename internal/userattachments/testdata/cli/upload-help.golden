@@ -1,0 +1,9 @@
+$ gh-user-attachments upload --help
+exit 0
+--- stdout (empty) ---
+--- stderr ---
+Usage: gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  -file value
+    	local attachment file path (required; repeat 2 to 10 times)
+  -repo string
+    	target repository in OWNER/REPO form (required)
