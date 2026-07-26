@@ -178,6 +178,50 @@ func renderInvocations(t *testing.T) string {
 		writeStream(&out, "stdout", normalizePaths(stdout.String(), directory))
 		writeStream(&out, "stderr", normalizePaths(stderr.String(), directory))
 	}
+
+	// Driving run() records only what it rejects: an argument that starts being
+	// accepted proceeds to the network instead of producing a line here. Option
+	// parsing is therefore recorded at parseOptions, which is the gate itself, so
+	// loosening and tightening both land in this file.
+	out.WriteString("\n# option parsing (representative)\n")
+	for _, arguments := range [][]string{
+		{"--repo", "owner/repo", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "OWNER/repo.name-1_2", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "owner", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "owner/", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "/repo", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "owner/repo/extra", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "owner/re po", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "owner/repo?x", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "owner/repo#x", "--file", "a.png", "--file", "b.png"},
+		{"--repo", "owner/repo", "--file", "a.png"},
+		{"--repo", "owner/repo", "--file", "a.png", "--file", " "},
+		{"--repo", "owner/repo", "--file", "a.png", "--file", "a.png"},
+	} {
+		var discarded bytes.Buffer
+		parsed, err := parseOptions(arguments, &discarded)
+		if err != nil {
+			fmt.Fprintf(&out, "reject\t%s\t%s\n", strings.Join(arguments, " "), err)
+			continue
+		}
+		fmt.Fprintf(&out, "accept\t%s\trepo=%s files=%d\n", strings.Join(arguments, " "), parsed.repository, len(parsed.files))
+	}
+
+	// The upper bound is finite and cheap to walk, so the file count is total
+	// rather than sampled at its edges.
+	out.WriteString("\n# --file count (total over 0..maxFiles+1)\n")
+	for count := 0; count <= maxFiles+1; count++ {
+		arguments := []string{"--repo", "owner/repo"}
+		for index := 0; index < count; index++ {
+			arguments = append(arguments, "--file", fmt.Sprintf("%d.png", index))
+		}
+		var discarded bytes.Buffer
+		verdict := "accept"
+		if _, err := parseOptions(arguments, &discarded); err != nil {
+			verdict = "reject"
+		}
+		fmt.Fprintf(&out, "%d\t%s\n", count, verdict)
+	}
 	return out.String()
 }
 

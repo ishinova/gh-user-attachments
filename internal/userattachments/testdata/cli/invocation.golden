@@ -144,3 +144,31 @@ Usage: gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--f
   -repo string
     	target repository in OWNER/REPO form (required)
 gh-user-attachments: flag provided but not defined: -unknown
+
+# option parsing (representative)
+accept	--repo owner/repo --file a.png --file b.png	repo=owner/repo files=2
+accept	--repo OWNER/repo.name-1_2 --file a.png --file b.png	repo=OWNER/repo.name-1_2 files=2
+reject	--repo owner --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/ --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo /repo --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/repo/extra --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/re po --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/repo?x --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/repo#x --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/repo --file a.png	--file must be specified between 2 and 10 times
+reject	--repo owner/repo --file a.png --file  	--file paths must not be empty
+accept	--repo owner/repo --file a.png --file a.png	repo=owner/repo files=2
+
+# --file count (total over 0..maxFiles+1)
+0	reject
+1	reject
+2	accept
+3	accept
+4	accept
+5	accept
+6	accept
+7	accept
+8	accept
+9	accept
+10	accept
+11	reject
