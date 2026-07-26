@@ -36,8 +36,13 @@ To pin to a specific release tag:
 gh extension install ishinova/gh-user-attachments --pin <APPROVED_TAG>
 ```
 
-Releases target native macOS arm64. To try from source, run `go run .` in this
-directory.
+Releases target macOS arm64, Linux amd64, and Linux arm64. To try from source,
+run `go run .` in this directory.
+
+On Linux, `auth login` needs Google Chrome or Chromium installed and a usable
+display, because sign-in happens in a visible browser window. Under WSL the
+display comes from WSLg; a distribution booted with `systemd=true` may leave
+`DISPLAY` unset even so, in which case export `DISPLAY=:0` before signing in.
 
 ### Agent Skill Installation
 
@@ -68,8 +73,11 @@ only reusable credential copy is the stored session file. Sign-in aborts after
 10 minutes without completion.
 
 - The personal Chrome profile and browser cookie stores are never read.
-- The Chrome executable is auto-detected. Set `GH_USER_ATTACHMENTS_CHROME` to
-  use a different executable path.
+- The Chrome executable is auto-detected: the Google Chrome bundle on macOS, and
+  `google-chrome-stable`, `google-chrome`, `chromium`, or `chromium-browser` on
+  `PATH` on Linux. Headless-only builds are never selected, because the sign-in
+  window has to be visible. Set `GH_USER_ATTACHMENTS_CHROME` to use a different
+  executable path.
 - `auth login` and `auth logout` are mutually exclusive. A run fails while
   another login / logout is in progress.
 
@@ -194,7 +202,7 @@ To refresh dependency license notices after updating Go modules and running
 mise run licenses:update
 ```
 
-Build a release candidate for native macOS arm64 with the version under
+Build a release candidate for every supported platform with the version under
 approval stated explicitly.
 
 ```bash
