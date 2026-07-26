@@ -1,7 +1,7 @@
 # invocations (representative)
 
 $ gh-user-attachments 
-exit 0
+exit 0	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 Upload multiple files as native GitHub user attachments.
@@ -10,13 +10,13 @@ Usage:
   gh-user-attachments auth <login|logout|status>
 
 $ gh-user-attachments upload
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
 
 $ gh-user-attachments auth
-exit 0
+exit 0	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 Manage the GitHub web session used for native attachment upload.
@@ -26,7 +26,7 @@ Usage:
   gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
 
 $ gh-user-attachments auth status extra
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: unknown auth command "status extra"
@@ -37,7 +37,7 @@ Usage:
   gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
 
 $ gh-user-attachments auth unknown
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: unknown auth command "unknown"
@@ -48,7 +48,7 @@ Usage:
   gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
 
 $ gh-user-attachments unknown
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: unknown command "unknown"
@@ -58,7 +58,7 @@ Usage:
   gh-user-attachments auth <login|logout|status>
 
 $ gh-user-attachments --version extra
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: unknown command "--version"
@@ -68,73 +68,73 @@ Usage:
   gh-user-attachments auth <login|logout|status>
 
 $ gh-user-attachments upload --file <dir>/first.png --file <dir>/second.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
 
 $ gh-user-attachments upload --repo owner --file <dir>/first.png --file <dir>/second.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
 
 $ gh-user-attachments upload --repo owner/repo/extra --file <dir>/first.png --file <dir>/second.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
 
 $ gh-user-attachments upload --repo owner/re po --file <dir>/first.png --file <dir>/second.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
 
 $ gh-user-attachments upload --repo owner/repo?x --file <dir>/first.png --file <dir>/second.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
 
 $ gh-user-attachments upload --repo /repo --file <dir>/first.png --file <dir>/second.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
 
 $ gh-user-attachments upload --repo owner/ --file <dir>/first.png --file <dir>/second.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
 
 $ gh-user-attachments upload --repo OWNER/repo.name-1_2 --file <dir>/first.png --file <dir>/second.png --file <dir>/first.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: duplicate --file: <dir>/first.png
 
 $ gh-user-attachments upload --repo owner/repo --file <dir>/first.png
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --file must be specified between 2 and 10 times
 
 $ gh-user-attachments upload --repo owner/repo --file <dir>/first.png --file 
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --file paths must not be empty
 
 $ gh-user-attachments upload --repo owner/repo --file <dir>/first.png --file <dir>/second.png trailing
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: unexpected arguments: trailing
 
 $ gh-user-attachments upload --repo owner/repo --unknown x
-exit 2
+exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 flag provided but not defined: -unknown

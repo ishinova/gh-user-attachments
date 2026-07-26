@@ -171,10 +171,19 @@ func renderInvocations(t *testing.T) string {
 		{"upload", "--repo", "owner/repo", "--file", first, "--file", second, "trailing"},
 		{"upload", "--repo", "owner/repo", "--unknown", "x"},
 	} {
+		// A runner that records reaching gh, rather than one that aborts the
+		// test there. Whether an argv gets past local validation is itself part
+		// of the surface, so loosening validation has to produce a line here
+		// instead of killing the section before later rows run.
+		reachedGH := false
+		runner := func(context.Context, ...string) (commandResult, error) {
+			reachedGH = true
+			return commandResult{}, errSurface
+		}
 		var stdout, stderr bytes.Buffer
-		code := run(context.Background(), arguments, &stdout, &stderr, forbidGH(t))
+		code := run(context.Background(), arguments, &stdout, &stderr, runner)
 		fmt.Fprintf(&out, "\n$ gh-user-attachments %s\n", normalizePaths(strings.Join(arguments, " "), directory))
-		fmt.Fprintf(&out, "exit %d\n", code)
+		fmt.Fprintf(&out, "exit %d\treached gh: %t\n", code, reachedGH)
 		writeStream(&out, "stdout", normalizePaths(stdout.String(), directory))
 		writeStream(&out, "stderr", normalizePaths(stderr.String(), directory))
 	}
