@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -124,24 +125,36 @@ func renderContract(t *testing.T) string {
 	out.WriteString("# version line\n")
 	out.WriteString(stdout.String())
 
-	// exitCodeFor reads four inputs, each over a finite domain, so the golden
-	// enumerates the whole decision table instead of sampling it. The enum bounds
-	// are recorded too: inserting a remote state or a phase shifts them and moves
-	// this file, which is what forces the table to be regenerated.
-	fmt.Fprintf(&out, "\n# exit codes (remoteChanged=%d phaseFinalize=%d)\n", remoteChanged, phaseFinalize)
-	out.WriteString("err\turls\tremote\tphase\texit\n")
+	// exitCodeFor branches on four inputs whose representable domains are finite:
+	// two booleans and two uint8 enums. The golden walks every value of all four
+	// and emits a row wherever the result changes, so the table is total over the
+	// representable domain rather than over the constants named today. A state or
+	// phase added later cannot escape it, and adding one that no branch reads
+	// leaves this file untouched, which is correct because nothing observable
+	// changed.
+	out.WriteString("\n# exit codes (first row of each run; total over the domain)\n")
+	out.WriteString("err\turls\tremote>=\tphase>=\texit\n")
 	for _, failed := range []bool{false, true} {
 		for _, finalized := range []bool{false, true} {
-			for state := remoteUnchanged; state <= remoteChanged; state++ {
-				for phase := phaseNone; phase <= phaseFinalize; phase++ {
-					outcome := batchOutcome{RemoteState: state, FailedPhase: phase}
+			previous := -1
+			for state := 0; state <= math.MaxUint8; state++ {
+				for phase := 0; phase <= math.MaxUint8; phase++ {
+					outcome := batchOutcome{
+						RemoteState: remoteStateCertainty(state),
+						FailedPhase: failurePhase(phase),
+					}
 					if failed {
 						outcome.Err = errSurface
 					}
 					if finalized {
 						outcome.FinalizedURLs = []string{"url"}
 					}
-					fmt.Fprintf(&out, "%t\t%t\t%d\t%d\t%d\n", failed, finalized, state, phase, exitCodeFor(outcome))
+					code := exitCodeFor(outcome)
+					if code == previous {
+						continue
+					}
+					previous = code
+					fmt.Fprintf(&out, "%t\t%t\t%d\t%d\t%d\n", failed, finalized, state, phase, code)
 				}
 			}
 		}
