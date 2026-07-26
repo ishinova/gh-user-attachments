@@ -27,7 +27,9 @@ gh user-attachments --version
 gh extension install ishinova/gh-user-attachments --pin <APPROVED_TAG>
 ```
 
-リリースは Native macOS arm64 を対象としています。ソースから試す場合は、このディレクトリで `go run .` を実行してください。
+リリースは macOS arm64、Linux amd64、Linux arm64 を対象としています。ソースから試す場合は、このディレクトリで `go run .` を実行してください。
+
+Linux で `auth login` を使用する場合、サインインは表示されるブラウザウィンドウで行われるため、Google Chrome または Chromium のインストールと利用可能なディスプレイが必要です。WSL では WSLg がディスプレイを提供しますが、`systemd=true` で起動しているディストリビューションでは `DISPLAY` が設定されないことがあります。その場合はサインイン前に `DISPLAY=:0` を export してください。
 
 ### Agent スキルのインストール
 
@@ -51,7 +53,7 @@ gh user-attachments auth status
 ツール所有の使い捨て Chrome プロファイルを使用して Chrome を起動します。GitHub へのサインイン完了後、ツールは `user_session` を抽出し、`gh` と同じユーザーに属していることを検証した上で、OS のユーザー設定ディレクトリ (`os.UserConfigDir()`) 内のツール状態配下にパーミッション `0600` の通常ファイルとしてアトミックに保存します。Chrome プロファイルはブラウザの終了後に削除されます。再利用可能な資格情報の複製は保存されたセッションファイルのみです。サインインが完了しないまま 10 分経過すると処理は中断されます。
 
 - 個人の Chrome プロファイルやブラウザのクッキーストアが読み込まれることはありません。
-- Chrome の実行ファイルは自動検出されます。別の実行ファイルパスを使用する場合は `GH_USER_ATTACHMENTS_CHROME` を設定してください。
+- Chrome の実行ファイルは自動検出されます。macOS では Google Chrome のバンドル、Linux では `PATH` 上の `google-chrome-stable`、`google-chrome`、`chromium`、`chromium-browser` が対象です。サインインのウィンドウを表示する必要があるため、ヘッドレス専用のビルドが選択されることはありません。別の実行ファイルパスを使用する場合は `GH_USER_ATTACHMENTS_CHROME` を設定してください。
 - `auth login` と `auth logout` は排他的です。他のログイン / ログアウトが進行中の場合、実行は失敗します。
 
 ### auth status
@@ -135,7 +137,7 @@ Go モジュールを更新して `go mod tidy` を実行した後に依存関�
 mise run licenses:update
 ```
 
-承認対象のバージョンを明示的に指定して、Native macOS arm64 向けのリリース候補をビルドします。
+承認対象のバージョンを明示的に指定して、対応する全プラットフォーム向けのリリース候補をビルドします。
 
 ```bash
 mise run release:build -- v1.2.3
