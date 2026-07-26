@@ -3,12 +3,20 @@ gh-user-attachments 0.0.0-golden
 
 # exit codes
 0	every file finalized
-2	options or local validation failed, no remote mutation started
+2	local validation failed
 3	failed before the first remote mutation
-4	remote state changed or cannot be ruled out
+4	failed after remote state changed
+4	failed after finalizing at least one URL
 
-# result URL path
-^/user-attachments/assets/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+# result URL
+accept	https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	http://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://user@github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://github.com:443/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://example.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://github.com/user-attachments/assets/not-a-uuid
+reject	https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444?x=1
+reject	https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444#x
 
 # file count
 min	2

@@ -3,6 +3,7 @@ package userattachments
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -31,6 +32,10 @@ var updateCLISurface = flag.Bool("update", false, "rewrite the CLI surface golde
 const goldenVersion = "0.0.0-golden"
 
 const cliSurfaceDir = "testdata/cli"
+
+// errSurface stands in for any failure when driving the exit-code mapping. Only
+// its presence matters to exitCodeFor, never its text.
+var errSurface = errors.New("surface")
 
 func TestCLISurfaceMatchesGoldenFiles(t *testing.T) {
 	for name, render := range map[string]func(*testing.T) string{
@@ -119,21 +124,42 @@ func renderContract(t *testing.T) string {
 	out.WriteString("# version line\n")
 	out.WriteString(stdout.String())
 
+	// Exit codes come from exitCodeFor rather than from the constants, so a
+	// change to the mapping moves the golden even when the constants stay.
 	out.WriteString("\n# exit codes\n")
 	for _, entry := range []struct {
-		code    int
-		meaning string
+		outcome     batchOutcome
+		description string
 	}{
-		{exitOK, "every file finalized"},
-		{exitUsage, "options or local validation failed, no remote mutation started"},
-		{exitAPI, "failed before the first remote mutation"},
-		{exitPartial, "remote state changed or cannot be ruled out"},
+		{batchOutcome{FinalizedURLs: []string{"a"}}, "every file finalized"},
+		{batchOutcome{FailedPhase: phaseLocalValidation, RemoteState: remoteUnchanged, Err: errSurface}, "local validation failed"},
+		{batchOutcome{FailedPhase: phasePolicy, RemoteState: remoteUnchanged, Err: errSurface}, "failed before the first remote mutation"},
+		{batchOutcome{FailedPhase: phaseObjectUpload, RemoteState: remoteChanged, Err: errSurface}, "failed after remote state changed"},
+		{batchOutcome{FinalizedURLs: []string{"a"}, FailedPhase: phaseObjectUpload, Err: errSurface}, "failed after finalizing at least one URL"},
 	} {
-		fmt.Fprintf(&out, "%d\t%s\n", entry.code, entry.meaning)
+		fmt.Fprintf(&out, "%d\t%s\n", exitCodeFor(entry.outcome), entry.description)
 	}
 
-	out.WriteString("\n# result URL path\n")
-	fmt.Fprintf(&out, "%s\n", nativeAssetPathPattern.String())
+	// The result URL contract is the whole of validateNativeAssetURL, not just
+	// the path pattern: scheme, userinfo, host, port, query, and fragment are
+	// all part of what a caller may trust.
+	out.WriteString("\n# result URL\n")
+	for _, candidate := range []string{
+		"https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
+		"http://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
+		"https://user@github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
+		"https://github.com:443/user-attachments/assets/00000000-1111-2222-3333-444444444444",
+		"https://example.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
+		"https://github.com/user-attachments/assets/not-a-uuid",
+		"https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444?x=1",
+		"https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444#x",
+	} {
+		verdict := "accept"
+		if err := validateNativeAssetURL(candidate); err != nil {
+			verdict = "reject"
+		}
+		fmt.Fprintf(&out, "%s\t%s\n", verdict, candidate)
+	}
 
 	out.WriteString("\n# file count\n")
 	fmt.Fprintf(&out, "min\t%d\nmax\t%d\n", minFiles, maxFiles)
