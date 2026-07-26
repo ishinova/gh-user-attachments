@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -23,8 +24,38 @@ const (
 
 var repositoryPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
 
+// developmentVersion marks a build the release pipeline did not stamp. It is a
+// constant string expression so -ldflags -X keeps working on Version.
+const developmentVersion = "dev"
+
 // Version is replaced by the release build through -ldflags.
-var Version = "dev"
+var Version = developmentVersion
+
+// readBuildInfo is a seam. Tests cannot control how the test binary itself was
+// built, so they replace this instead of depending on the surrounding checkout.
+var readBuildInfo = debug.ReadBuildInfo
+
+// resolveVersion reports the most specific identifier available for this build.
+// The release pipeline injects the tag, so that value always wins. Every other
+// build path leaves developmentVersion behind, which identifies nothing; there
+// the main module version the toolchain stamps from version control is used
+// instead. Go 1.24 and later derive it from the tag or commit and append
+// "+dirty" for uncommitted changes, so it is traceable on its own.
+func resolveVersion() string {
+	if Version != developmentVersion {
+		return Version
+	}
+	info, ok := readBuildInfo()
+	if !ok {
+		return developmentVersion
+	}
+	// "(devel)" is what the toolchain reports when it has no version control
+	// data to stamp, which carries no more information than the default.
+	if version := info.Main.Version; version != "" && version != "(devel)" {
+		return version
+	}
+	return developmentVersion
+}
 
 // newRunBatchUpload builds the upload batch used by run(). Tests may replace
 // this to inject prepare/uploader seams without changing production behavior.
@@ -60,7 +91,7 @@ func run(ctx context.Context, arguments []string, stdout, stderr io.Writer, runn
 		return exitOK
 	}
 	if len(arguments) == 1 && arguments[0] == "--version" {
-		fmt.Fprintf(stdout, "gh-user-attachments %s\n", Version)
+		fmt.Fprintf(stdout, "gh-user-attachments %s\n", resolveVersion())
 		return exitOK
 	}
 	if arguments[0] == "auth" {
