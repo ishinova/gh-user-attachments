@@ -124,35 +124,48 @@ func renderContract(t *testing.T) string {
 	out.WriteString("# version line\n")
 	out.WriteString(stdout.String())
 
-	// Exit codes come from exitCodeFor rather than from the constants, so a
-	// change to the mapping moves the golden even when the constants stay.
-	out.WriteString("\n# exit codes\n")
-	for _, entry := range []struct {
-		outcome     batchOutcome
-		description string
-	}{
-		{batchOutcome{FinalizedURLs: []string{"a"}}, "every file finalized"},
-		{batchOutcome{FailedPhase: phaseLocalValidation, RemoteState: remoteUnchanged, Err: errSurface}, "local validation failed"},
-		{batchOutcome{FailedPhase: phasePolicy, RemoteState: remoteUnchanged, Err: errSurface}, "failed before the first remote mutation"},
-		{batchOutcome{FailedPhase: phaseObjectUpload, RemoteState: remoteChanged, Err: errSurface}, "failed after remote state changed"},
-		{batchOutcome{FinalizedURLs: []string{"a"}, FailedPhase: phaseObjectUpload, Err: errSurface}, "failed after finalizing at least one URL"},
-	} {
-		fmt.Fprintf(&out, "%d\t%s\n", exitCodeFor(entry.outcome), entry.description)
+	// exitCodeFor reads four inputs, each over a finite domain, so the golden
+	// enumerates the whole decision table instead of sampling it. The enum bounds
+	// are recorded too: inserting a remote state or a phase shifts them and moves
+	// this file, which is what forces the table to be regenerated.
+	fmt.Fprintf(&out, "\n# exit codes (remoteChanged=%d phaseFinalize=%d)\n", remoteChanged, phaseFinalize)
+	out.WriteString("err\turls\tremote\tphase\texit\n")
+	for _, failed := range []bool{false, true} {
+		for _, finalized := range []bool{false, true} {
+			for state := remoteUnchanged; state <= remoteChanged; state++ {
+				for phase := phaseNone; phase <= phaseFinalize; phase++ {
+					outcome := batchOutcome{RemoteState: state, FailedPhase: phase}
+					if failed {
+						outcome.Err = errSurface
+					}
+					if finalized {
+						outcome.FinalizedURLs = []string{"url"}
+					}
+					fmt.Fprintf(&out, "%t\t%t\t%d\t%d\t%d\n", failed, finalized, state, phase, exitCodeFor(outcome))
+				}
+			}
+		}
 	}
 
-	// The result URL contract is the whole of validateNativeAssetURL, not just
-	// the path pattern: scheme, userinfo, host, port, query, and fragment are
-	// all part of what a caller may trust.
-	out.WriteString("\n# result URL\n")
+	// The result URL domain is every string, so this matrix is representative,
+	// not exhaustive. It records what validateNativeAssetURL accepts today,
+	// including raw forms that decode to the canonical shape; hardening any of
+	// them later moves this file.
+	out.WriteString("\n# result URL (representative)\n")
 	for _, candidate := range []string{
 		"https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
 		"http://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
 		"https://user@github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
 		"https://github.com:443/user-attachments/assets/00000000-1111-2222-3333-444444444444",
 		"https://example.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
+		"https://GITHUB.com/user-attachments/assets/00000000-1111-2222-3333-444444444444",
 		"https://github.com/user-attachments/assets/not-a-uuid",
 		"https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444?x=1",
+		"https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444?",
 		"https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444#x",
+		"https://github.com/user-attachments/assets/%300000000-1111-2222-3333-444444444444",
+		"https://github.com/user-attachments/assets/00000000%2D1111-2222-3333-444444444444",
+		"https://github.com/user-attachments/../user-attachments/assets/00000000-1111-2222-3333-444444444444",
 	} {
 		verdict := "accept"
 		if err := validateNativeAssetURL(candidate); err != nil {
@@ -164,15 +177,35 @@ func renderContract(t *testing.T) string {
 	out.WriteString("\n# file count\n")
 	fmt.Fprintf(&out, "min\t%d\nmax\t%d\n", minFiles, maxFiles)
 
+	// Every accepted name goes through supportedType rather than being read out
+	// of the map, so the golden records the acceptance path and not just its
+	// table. The name set is the whole map plus the forms that exercise
+	// normalization and rejection, which makes it total over the map.
 	out.WriteString("\n# accepted files\n")
 	extensions := make([]string, 0, len(supportedFileTypes))
 	for extension := range supportedFileTypes {
 		extensions = append(extensions, extension)
 	}
 	sort.Strings(extensions)
+	names := make([]string, 0, len(extensions)+4)
 	for _, extension := range extensions {
-		fileType := supportedFileTypes[extension]
-		fmt.Fprintf(&out, "%s\t%s\t%d\n", extension, fileType.mediaType, fileType.maxBytes)
+		names = append(names, "file"+extension)
+	}
+	names = append(names,
+		"FILE.PNG",         // upper case extension
+		"File.Png",         // mixed case extension
+		"archive.tar.gz",   // multi-dot name
+		"file.unsupported", // unknown extension
+		"file",             // no extension
+		".png",             // dotfile that looks like an extension
+	)
+	for _, name := range names {
+		extension, fileType, err := supportedType(name)
+		if err != nil {
+			fmt.Fprintf(&out, "%s\treject\n", name)
+			continue
+		}
+		fmt.Fprintf(&out, "%s\taccept\t%s\t%s\t%d\n", name, extension, fileType.mediaType, fileType.maxBytes)
 	}
 
 	return out.String()
