@@ -1,0 +1,38 @@
+# file admission (representative)
+
+<dir>/valid.png <dir>/notes.txt
+load	accept
+materialize	accept	valid.png	image/png	77
+materialize	accept	notes.txt	text/plain	11
+
+<dir>/valid.png <dir>/UPPER.PNG
+load	accept
+materialize	accept	valid.png	image/png	77
+materialize	accept	UPPER.PNG	image/png	77
+
+<dir>/valid.png <dir>/mismatched.png
+load	reject	mismatched.png is not a valid .png image
+
+<dir>/valid.png <dir>/payload.bin
+load	reject	unsupported file type ".bin"; see GitHub's Attaching files documentation
+
+<dir>/valid.png <dir>/oversize.png
+load	reject	<dir>/oversize.png is 10485761 bytes; maximum is 10485760
+
+<dir>/valid.png <dir>/empty.png
+load	reject	empty.png is not a valid .png image
+
+<dir>/valid.png <dir>/link.png
+load	reject	refusing symbolic link: <dir>/link.png
+
+<dir>/valid.png <dir>/hardlink.png
+load	reject	duplicate --file: <dir>/hardlink.png
+
+<dir>/valid.png <dir>/missing.png
+load	reject	inspect <dir>/missing.png: lstat <dir>/missing.png: no such file or directory
+
+<dir>/valid.png <dir>/valid.png
+load	reject	duplicate --file: <dir>/valid.png
+
+<dir>/valid.png <dir>
+load	reject	not a regular file: <dir>

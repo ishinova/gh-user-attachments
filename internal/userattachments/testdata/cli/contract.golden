@@ -1,7 +1,7 @@
 # version line
 gh-user-attachments 0.0.0-golden
 
-# exit codes (first row of each run; total over the domain)
+# exit codes (total over remote 0..255, phase 0..255)
 err	urls	remote>=	phase>=	exit
 false	false	0	0	0
 false	true	0	0	0
@@ -30,77 +30,5 @@ reject	https://github.com/user-attachments/../user-attachments/assets/00000000-1
 min	2
 max	10
 
-# accepted files
-file.bmp	accept	.bmp	image/bmp	10485760
-file.c	accept	.c	text/x-c	26214400
-file.copilotmd	accept	.copilotmd	text/markdown	26214400
-file.cpp	accept	.cpp	text/x-c++	26214400
-file.cpuprofile	accept	.cpuprofile	application/json	26214400
-file.cs	accept	.cs	text/plain	26214400
-file.css	accept	.css	text/css	26214400
-file.csv	accept	.csv	text/csv	26214400
-file.debug	accept	.debug	text/plain	26214400
-file.dmp	accept	.dmp	application/octet-stream	26214400
-file.doc	accept	.doc	application/msword	26214400
-file.docx	accept	.docx	application/vnd.openxmlformats-officedocument.wordprocessingml.document	26214400
-file.drawio	accept	.drawio	application/xml	26214400
-file.eml	accept	.eml	message/rfc822	26214400
-file.fodg	accept	.fodg	application/vnd.oasis.opendocument.graphics-flat-xml	26214400
-file.fodp	accept	.fodp	application/vnd.oasis.opendocument.presentation-flat-xml	26214400
-file.fods	accept	.fods	application/vnd.oasis.opendocument.spreadsheet-flat-xml	26214400
-file.fodt	accept	.fodt	application/vnd.oasis.opendocument.text-flat-xml	26214400
-file.gif	accept	.gif	image/gif	10485760
-file.gz	accept	.gz	application/gzip	26214400
-file.htm	accept	.htm	text/html	26214400
-file.html	accept	.html	text/html	26214400
-file.ipynb	accept	.ipynb	application/x-ipynb+json	26214400
-file.java	accept	.java	text/x-java-source	26214400
-file.jpeg	accept	.jpeg	image/jpeg	10485760
-file.jpg	accept	.jpg	image/jpeg	10485760
-file.js	accept	.js	text/javascript	26214400
-file.json	accept	.json	application/json	26214400
-file.jsonc	accept	.jsonc	application/json	26214400
-file.log	accept	.log	text/plain	26214400
-file.md	accept	.md	text/markdown	26214400
-file.mov	accept	.mov	video/quicktime	104857600
-file.mp3	accept	.mp3	audio/mpeg	26214400
-file.mp4	accept	.mp4	video/mp4	104857600
-file.msg	accept	.msg	application/vnd.ms-outlook	26214400
-file.odf	accept	.odf	application/vnd.oasis.opendocument.formula	26214400
-file.odg	accept	.odg	application/vnd.oasis.opendocument.graphics	26214400
-file.odp	accept	.odp	application/vnd.oasis.opendocument.presentation	26214400
-file.ods	accept	.ods	application/vnd.oasis.opendocument.spreadsheet	26214400
-file.odt	accept	.odt	application/vnd.oasis.opendocument.text	26214400
-file.patch	accept	.patch	text/x-diff	26214400
-file.pdb	accept	.pdb	application/octet-stream	26214400
-file.pdf	accept	.pdf	application/pdf	26214400
-file.php	accept	.php	application/x-httpd-php	26214400
-file.png	accept	.png	image/png	10485760
-file.pptx	accept	.pptx	application/vnd.openxmlformats-officedocument.presentationml.presentation	26214400
-file.py	accept	.py	text/x-python	26214400
-file.rtf	accept	.rtf	application/rtf	26214400
-file.sh	accept	.sh	application/x-sh	26214400
-file.sql	accept	.sql	application/sql	26214400
-file.svg	accept	.svg	image/svg+xml	10485760
-file.tgz	accept	.tgz	application/gzip	26214400
-file.tif	accept	.tif	image/tiff	10485760
-file.tiff	accept	.tiff	image/tiff	10485760
-file.ts	accept	.ts	text/typescript	26214400
-file.tsv	accept	.tsv	text/tab-separated-values	26214400
-file.tsx	accept	.tsx	text/typescript	26214400
-file.txt	accept	.txt	text/plain	26214400
-file.wav	accept	.wav	audio/wav	26214400
-file.webm	accept	.webm	video/webm	104857600
-file.xls	accept	.xls	application/vnd.ms-excel	26214400
-file.xlsm	accept	.xlsm	application/vnd.ms-excel.sheet.macroEnabled.12	26214400
-file.xlsx	accept	.xlsx	application/vnd.openxmlformats-officedocument.spreadsheetml.sheet	26214400
-file.xml	accept	.xml	application/xml	26214400
-file.yaml	accept	.yaml	application/yaml	26214400
-file.yml	accept	.yml	application/yaml	26214400
-file.zip	accept	.zip	application/zip	26214400
-FILE.PNG	accept	.png	image/png	10485760
-File.Png	accept	.png	image/png	10485760
-archive.tar.gz	accept	.gz	application/gzip	26214400
-file.unsupported	reject
-file	reject
-.png	accept	.png	image/png	10485760
+# environment read during session resolution
+GH_USER_ATTACHMENTS_SESSION

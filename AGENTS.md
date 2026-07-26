@@ -28,6 +28,14 @@ GitHub Actions lane: update every use of same action to one validated full SHA a
 
 CLI surface is the golden files under `internal/userattachments/testdata/cli/`: commands, flags, exit codes, the `--version` line format, the result URL shape, and the accepted files. `mise run check` fails when behavior and golden disagree, so a pull request changes CLI surface exactly when its diff touches that directory. Regenerate with `go test ./internal/userattachments -update` and review the diff; never regenerate to silence a failure. Recording a surface that already exists is not a change to it, so the pull request that first adds these files triggers nothing.
 
+A golden only answers that question if every section obeys three rules. Check all three when adding or editing one, because a section that breaks any of them reports no change while released behavior changes.
+
+- Produced by calling the implementation, never by transcribing a map, a constant, or hand-written text. Record the verdict of the path a caller reaches, not the table that path consults.
+- Total over its input domain, or labelled `(representative)` in its heading. Walk finite domains whole, including values no constant names today; unbounded domains cannot be walked, so they say so instead of implying coverage they lack.
+- Reachable only through a registered section. An unregistered file under the directory is an orphan and fails the suite.
+
+The surface is what a caller can observe: accepted argv, exit codes, stdout, stderr, environment names read, and which local files are admitted. Observing a kind not on that list means adding a section and extending the list, not stretching an existing section.
+
 Three obligations, each with its own trigger. A pull request meets the ones it triggers and states in its body which triggers fired, or that none did and why.
 
 - Skill contract, triggered by a diff under `internal/userattachments/testdata/cli/`: update `skills/gh-user-attachments/` in same pull request so `SKILL.md` and `agents/openai.yaml` match the new surface. Keep deployed Skill unchanged until the release is published and verified.
