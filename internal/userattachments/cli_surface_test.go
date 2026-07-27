@@ -652,20 +652,32 @@ func renderContract(t *testing.T) string {
 	// path is resolved through PATH. The run above takes the host platform's
 	// branch only, so every branch is walked here instead.
 	out.WriteString("\n# candidate resolution per platform (total over the branches chromeCandidates names)\n")
+	previousLookPath := lookPath
+	t.Cleanup(func() { lookPath = previousLookPath })
 	for _, platform := range []string{"darwin", "linux", "windows"} {
 		// The sentinel is absolute so that a candidate built from it stays
 		// absolute, which is what separates a home-relative candidate from one
-		// PATH has to resolve.
+		// selection has to resolve through PATH.
 		const homeSentinel = "/home-sentinel"
-		usesHome, usesPath := false, false
-		for _, candidate := range chromeCandidates(platform, homeSentinel) {
+		candidates := chromeCandidates(platform, homeSentinel)
+		usesHome := false
+		for _, candidate := range candidates {
 			if strings.Contains(candidate, homeSentinel) {
 				usesHome = true
 			}
-			if !filepath.IsAbs(candidate) {
-				usesPath = true
-			}
 		}
+		// Whether PATH is read is recorded by running the selection with a
+		// recording lookPath rather than by inspecting the candidate strings: a
+		// selection that stopped consulting PATH would leave an inferred row
+		// unchanged.
+		usesPath := false
+		noteEnvironmentSeam("lookPath")
+		lookPath = func(string) (string, error) {
+			usesPath = true
+			return "", errSurface
+		}
+		_, _ = selectChrome(candidates)
+		lookPath = previousLookPath
 		fmt.Fprintf(&out, "%s\thome=%t\tPATH=%t\n", platform, usesHome, usesPath)
 	}
 
