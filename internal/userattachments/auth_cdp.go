@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/chromedp/cdproto/network"
@@ -128,18 +130,68 @@ func signedInLogin(ctx context.Context) (string, error) {
 // only reaches when the override is absent.
 var chromeGetenv = os.Getenv
 
+// lookPath is a seam so discovery can be exercised without depending on which
+// browsers happen to be installed on the machine running the tests.
+var lookPath = exec.LookPath
+
+// chromeCandidates lists the browsers to try for the given platform, in
+// preference order. Absolute pathnames are probed as files; bare names are
+// resolved through PATH.
+//
+// chromedp performs its own discovery when no ExecPath option is given, but it
+// is not usable here: on Unix it prefers headless_shell and headless-shell over
+// a full browser, and this flow needs a visible window for the user to sign in.
+// Its fallback also defers the failure to process start, which loses the early
+// message naming the override variable.
+func chromeCandidates(goos, home string) []string {
+	switch goos {
+	case "darwin":
+		candidates := []string{"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"}
+		if home != "" {
+			candidates = append(candidates, filepath.Join(home, "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"))
+		}
+		return candidates
+	case "linux":
+		// Every entry here can open a window. Headless-only builds are
+		// deliberately absent.
+		return []string{
+			"google-chrome-stable",
+			"google-chrome",
+			"chromium",
+			"chromium-browser",
+		}
+	default:
+		return nil
+	}
+}
+
 func findChrome() (string, error) {
 	if override := chromeGetenv(chromePathEnvironment); override != "" {
 		return override, nil
 	}
-	candidates := []string{"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"}
-	if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"))
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = ""
 	}
-	for _, candidate := range candidates {
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			return candidate, nil
-		}
+	if path, ok := selectChrome(chromeCandidates(runtime.GOOS, home)); ok {
+		return path, nil
 	}
 	return "", fmt.Errorf("find Google Chrome: install Chrome or set %s", chromePathEnvironment)
+}
+
+// selectChrome returns the first candidate that resolves to an existing
+// executable.
+func selectChrome(candidates []string) (string, bool) {
+	for _, candidate := range candidates {
+		if filepath.IsAbs(candidate) {
+			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+				return candidate, true
+			}
+			continue
+		}
+		if path, err := lookPath(candidate); err == nil {
+			return path, true
+		}
+	}
+	return "", false
 }

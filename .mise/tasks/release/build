@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
-#MISE description="Build the native macOS arm64 release artifacts"
+#MISE description="Build the release artifacts for every supported platform"
 set -euo pipefail
+
+# Platforms this extension is verified to run on. cli/gh-extension-precompile
+# builds a much wider default matrix, but build_script_override replaces that
+# matrix entirely, so every supported platform is listed here. The list stays
+# curated rather than exhaustive: publishing a binary for a platform the tool
+# cannot actually complete a sign-in on would fail at run time instead of at
+# install time, which is the worse failure.
+platforms=(
+  darwin-arm64
+  linux-amd64
+  linux-arm64
+)
 
 tag="${1:?release tag is required}"
 if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
@@ -10,12 +22,21 @@ fi
 
 version="${tag#v}"
 mkdir -p dist
-CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build \
-  -trimpath \
-  -buildvcs=false \
-  -ldflags="-s -w -X github.com/ishinova/gh-user-attachments/internal/userattachments.Version=${version}" \
-  -o "dist/gh-user-attachments_${tag}_darwin-arm64" \
-  .
+
+artifacts=()
+for platform in "${platforms[@]}"; do
+  goos="${platform%-*}"
+  goarch="${platform#*-}"
+  # gh resolves the asset by the trailing {os}-{arch} of the file name.
+  artifact="gh-user-attachments_${tag}_${platform}"
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build \
+    -trimpath \
+    -buildvcs=false \
+    -ldflags="-s -w -X github.com/ishinova/gh-user-attachments/internal/userattachments.Version=${version}" \
+    -o "dist/${artifact}" \
+    .
+  artifacts+=("$artifact")
+done
 
 {
   echo "Third-party license notices for gh-user-attachments ${version}"
@@ -34,8 +55,8 @@ CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build \
 (
   cd dist
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "gh-user-attachments_${tag}_darwin-arm64" THIRD_PARTY_NOTICES.txt > checksums.txt
+    sha256sum "${artifacts[@]}" THIRD_PARTY_NOTICES.txt > checksums.txt
   else
-    shasum -a 256 "gh-user-attachments_${tag}_darwin-arm64" THIRD_PARTY_NOTICES.txt > checksums.txt
+    shasum -a 256 "${artifacts[@]}" THIRD_PARTY_NOTICES.txt > checksums.txt
   fi
 )
