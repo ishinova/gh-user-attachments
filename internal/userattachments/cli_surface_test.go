@@ -18,11 +18,13 @@ import (
 	"testing"
 )
 
-// The golden files under testdata/cli hold the CLI surface. AGENTS.md keys the
-// Release contract on this directory, so "did this change the CLI surface" is
-// answered by whether the diff touches these files rather than by reading the
-// change. Three rules keep that answer trustworthy, and a section that cannot
-// follow them is not a section:
+// The golden files under testdata/cli record what a caller observes. They are
+// evidence of what changed, not the detector of whether something changed: the
+// obligations in AGENTS.md are keyed to the Go source and the Skill directory,
+// because the observations a caller could make are unbounded and no set of
+// sections closes them. An unchanged golden is therefore not proof that no
+// obligation fired. Three rules keep the evidence worth reading, and a section
+// that cannot follow them is not a section:
 //
 //   - Produced by calling the implementation. Transcribing a map, a constant, or
 //     hand-written text records the declaration instead of the behavior, and a
@@ -499,14 +501,21 @@ func renderContract(t *testing.T) string {
 	out.WriteString("# version line\n")
 	out.WriteString(stdout.String())
 
-	// The enum domain bound is recorded rather than used as the loop bound.
-	// Deriving the bound from the type would turn a widening to uint16 into
-	// 17 billion exitCodeFor calls before assertGolden could report anything, so
-	// the promised guard would hang mise run check instead of failing it. Here a
-	// widening moves these two rows and fails in a second, and the walk itself
-	// stays at the fixed span below.
-	fmt.Fprintf(&out, "\n# enum domain bound (the walk below is total while both are %d)\n", enumWalkBound)
-	fmt.Fprintf(&out, "remoteStateCertainty\t%d\nfailurePhase\t%d\n", uint64(^remoteStateCertainty(0)), uint64(^failurePhase(0)))
+	// The walk below is total only while both enums fit inside it. That is
+	// asserted rather than recorded: the storage width is internal, so a golden
+	// row carrying it would report a caller-visible change whenever a refactor
+	// widened a type without touching what exitCodeFor returns. Deriving the loop
+	// bound from the type instead would turn a widening to uint16 into
+	// 17 billion calls, so the span stays a literal and this assertion fails in a
+	// second when a type outgrows it.
+	for name, bound := range map[string]uint64{
+		"remoteStateCertainty": uint64(^remoteStateCertainty(0)),
+		"failurePhase":         uint64(^failurePhase(0)),
+	} {
+		if bound > enumWalkBound {
+			t.Fatalf("%s spans 0..%d, wider than the walk's 0..%d; widen enumWalkBound and re-record", name, bound, enumWalkBound)
+		}
+	}
 
 	// exitCodeFor branches on four inputs: two booleans and two unsigned enums.
 	// The walk covers every value both enums hold at their current width and

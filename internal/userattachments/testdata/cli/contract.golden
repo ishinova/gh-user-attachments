@@ -1,10 +1,6 @@
 # version line
 gh-user-attachments 0.0.0-golden
 
-# enum domain bound (the walk below is total while both are 255)
-remoteStateCertainty	255
-failurePhase	255
-
 # exit codes (total over remote 0..255, phase 0..255)
 err	urls	remote>=	phase>=	exit
 false	false	0	0	0
