@@ -38,6 +38,9 @@ override honored	true
 GH_USER_ATTACHMENTS_CHROME
 home directory consulted	true
 
+# environment read during tool state resolution
+configuration directory consulted	true
+
 # candidate resolution per platform (total over the branches chromeCandidates names)
 darwin	home=true	PATH=false
 linux	home=false	PATH=true

@@ -50,8 +50,14 @@ type toolState struct {
 	root *os.Root
 }
 
+// toolStateUserConfigDir is the configuration-directory lookup tool state
+// resolution performs. Tests replace it to record whether resolution still
+// depends on it; the environment variable names behind it are defined by the
+// standard library and differ per platform.
+var toolStateUserConfigDir = os.UserConfigDir
+
 func defaultToolState() (*toolState, error) {
-	base, err := os.UserConfigDir()
+	base, err := toolStateUserConfigDir()
 	if err != nil {
 		return nil, fmt.Errorf("locate user config directory: %w", err)
 	}

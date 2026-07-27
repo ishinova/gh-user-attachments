@@ -37,7 +37,7 @@ load	reject	duplicate --file: <dir>/valid.png
 <dir>/valid.png <dir>
 load	reject	not a regular file: <dir>
 
-# extensions (total over the documented and advertised sets)
+# extensions (representative: the documented and advertised sets)
 extension	media type	largest admitted bytes
 .bmp	image/bmp	10485760
 .c	text/x-c	26214400

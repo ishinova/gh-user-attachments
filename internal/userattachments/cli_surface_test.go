@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -17,7 +18,7 @@ import (
 // The golden files under testdata/cli hold the CLI surface. AGENTS.md keys the
 // Release contract on this directory, so "did this change the CLI surface" is
 // answered by whether the diff touches these files rather than by reading the
-// change. Two rules keep that answer trustworthy, and a section that cannot
+// change. Three rules keep that answer trustworthy, and a section that cannot
 // follow them is not a section:
 //
 //   - Produced by calling the implementation. Transcribing a map, a constant, or
@@ -26,6 +27,8 @@ import (
 //   - Total over its input domain, or labelled "(representative)" in its
 //     heading. Finite domains are walked whole, including values no constant
 //     names today. Unbounded domains cannot be, so they say so.
+//   - Reachable only through a registered section, so a file cannot outlive the
+//     section that produced it.
 //
 // The surface is what a caller can observe: accepted argv, exit codes, stdout,
 // stderr, environment variables read, and which local files are admitted.
@@ -105,6 +108,68 @@ func TestCLISurfaceHasNoOrphanGoldenFiles(t *testing.T) {
 	}
 }
 
+// environmentLookups are the standard-library entry points through which this
+// package reaches the environment. A golden can only record the names a caller
+// may set if every one of these calls is either replaceable by a test or passed
+// to something that is.
+var environmentLookups = []string{"os.Getenv", "os.UserConfigDir", "os.UserHomeDir"}
+
+// environmentLookupExceptions are the call sites that reach the environment
+// without a package-level seam, each because the value is injected or the name
+// is already recorded elsewhere.
+var environmentLookupExceptions = map[string]string{
+	"auth.go:getenv:        os.Getenv,":                                           "injected into authService, which tests replace",
+	"auth.go:if strings.TrimSpace(os.Getenv(githubSessionEnvironment)) != \"\" {": "reads the name resolveNativeSession already records",
+	"native_session.go:session, err := resolveNativeSession(os.Getenv, store)":    "injected into resolveNativeSession, which the golden drives with a recorder",
+}
+
+// TestEnvironmentReadsStayRecordable keeps the recorded environment sections
+// complete by construction. Three review rounds found the same defect in
+// different paths: a lookup performed directly on the standard library cannot
+// be observed, so a name a caller may set never reaches a golden and the
+// diff-based Skill trigger misses it. Rather than wait to notice the next path,
+// this fails when one appears.
+func TestEnvironmentReadsStayRecordable(t *testing.T) {
+	entries, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("list package files: %v", err)
+	}
+	seam := regexp.MustCompile(`^var \w+ = os\.(Getenv|UserConfigDir|UserHomeDir)$`)
+	for _, entry := range entries {
+		if strings.HasSuffix(entry, "_test.go") {
+			continue
+		}
+		content, err := os.ReadFile(entry)
+		if err != nil {
+			t.Fatalf("read %s: %v", entry, err)
+		}
+		for _, line := range strings.Split(string(content), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "//") || !containsAny(trimmed, environmentLookups) {
+				continue
+			}
+			if seam.MatchString(trimmed) {
+				continue
+			}
+			if _, allowed := environmentLookupExceptions[entry+":"+trimmed]; allowed {
+				continue
+			}
+			t.Errorf("%s reads the environment outside a recordable seam:\n\t%s\n"+
+				"declare a package-level seam so contract.golden can record it, "+
+				"or add the call site to environmentLookupExceptions with its reason", entry, trimmed)
+		}
+	}
+}
+
+func containsAny(line string, needles []string) bool {
+	for _, needle := range needles {
+		if strings.Contains(line, needle) {
+			return true
+		}
+	}
+	return false
+}
+
 func assertGolden(t *testing.T, name, actual string) {
 	t.Helper()
 	path := filepath.Join(cliSurfaceDir, name)
@@ -163,11 +228,22 @@ func renderInvocations(t *testing.T) string {
 
 	// auth dispatches only after opening the session store, so the state
 	// directory is redirected into the temporary directory normalizePaths
-	// rewrites. auth login is deliberately absent from the matrix: it launches a
-	// browser.
+	// rewrites. Which variable moves it is platform-dependent and the resolved
+	// base has to exist before the store opens: on darwin os.UserConfigDir
+	// ignores XDG_CONFIG_HOME and resolves beneath $HOME/Library/Application
+	// Support, which a bare temporary HOME does not contain. Creating whatever
+	// the platform resolves keeps these rows identical on every supported host.
+	// auth login is deliberately absent from the matrix: it launches a browser.
 	t.Setenv("HOME", directory)
-	t.Setenv("XDG_CONFIG_HOME", directory)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(directory, "config"))
 	t.Setenv(githubSessionEnvironment, "")
+	configBase, err := os.UserConfigDir()
+	if err != nil {
+		t.Fatalf("resolve config directory: %v", err)
+	}
+	if err := os.MkdirAll(configBase, 0o700); err != nil {
+		t.Fatalf("create %s: %v", configBase, err)
+	}
 
 	var out strings.Builder
 	out.WriteString("# invocations (representative)\n")
@@ -463,6 +539,24 @@ func renderContract(t *testing.T) string {
 	}
 	fmt.Fprintf(&out, "home directory consulted\t%t\n", homeConsulted)
 
+	// Tool state resolution reaches the environment through the configuration
+	// directory, whose variable names the standard library owns and which differ
+	// per platform. What is recorded is that the dependency exists.
+	previousConfigDir := toolStateUserConfigDir
+	t.Cleanup(func() { toolStateUserConfigDir = previousConfigDir })
+	configConsulted := false
+	toolStateUserConfigDir = func() (string, error) {
+		configConsulted = true
+		return "", errSurface
+	}
+	store, storeErr := defaultSessionStore()
+	if storeErr == nil {
+		_, _ = store.Get()
+	}
+	toolStateUserConfigDir = previousConfigDir
+	out.WriteString("\n# environment read during tool state resolution\n")
+	fmt.Fprintf(&out, "configuration directory consulted\t%t\n", configConsulted)
+
 	// The fallback also depends on the home directory and on PATH, whose
 	// variable names the standard library owns rather than this package. What
 	// this package decides is which of them each platform's candidates need, and
@@ -600,7 +694,7 @@ func renderSupportedTypes(t *testing.T) string {
 	sort.Strings(extensions)
 
 	var out strings.Builder
-	out.WriteString("\n# extensions (total over the documented and advertised sets)\n")
+	out.WriteString("\n# extensions (representative: the documented and advertised sets)\n")
 	out.WriteString("extension\tmedia type\tlargest admitted bytes\n")
 	var known []int64
 	for _, extension := range extensions {
