@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -73,6 +74,7 @@ func cliSurfaceSections() map[string]func(*testing.T) string {
 		"auth-help.golden":      func(t *testing.T) string { return runForSurface(t, "auth", "--help") },
 		"invocation.golden":     renderInvocations,
 		"upload-output.golden":  renderUploadOutput,
+		"entrypoint.golden":     renderEntryPoint,
 		"contract.golden":       renderContract,
 		"files.golden":          renderFileAdmission,
 	}
@@ -114,7 +116,11 @@ func TestCLISurfaceHasNoOrphanGoldenFiles(t *testing.T) {
 // package reaches the environment. A golden can only record the names a caller
 // may set if every one of these calls is either replaceable by a test or passed
 // to something that is.
-var environmentLookups = []string{"os.Getenv", "os.UserConfigDir", "os.UserHomeDir"}
+var environmentLookups = []string{
+	"os.Getenv", "os.LookupEnv", "os.Environ", "os.ExpandEnv",
+	"os.UserConfigDir", "os.UserHomeDir",
+	"syscall.Getenv", "syscall.Environ",
+}
 
 // environmentLookupExceptions are the call sites that reach the environment
 // without a package-level seam, each because the value is injected or the name
@@ -136,7 +142,7 @@ func TestEnvironmentReadsStayRecordable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list package files: %v", err)
 	}
-	seam := regexp.MustCompile(`^var (\w+) = os\.(Getenv|UserConfigDir|UserHomeDir)$`)
+	seam := regexp.MustCompile(`^var (\w+) = (os|syscall)\.(Getenv|LookupEnv|Environ|ExpandEnv|UserConfigDir|UserHomeDir)$`)
 	declared := map[string]string{}
 	for _, entry := range entries {
 		if strings.HasSuffix(entry, "_test.go") {
@@ -370,6 +376,49 @@ func renderInvocations(t *testing.T) string {
 			verdict = "reject"
 		}
 		fmt.Fprintf(&out, "%d\t%s\n", count, verdict)
+	}
+	return out.String()
+}
+
+// renderEntryPoint runs the built binary. Every other section calls run()
+// directly, so main.go and the exported Run wrapper are unrecorded: swapping the
+// streams they pass, changing which arguments they forward, or dropping the exit
+// status would leave every golden unchanged. The argv here is representative and
+// limited to forms that return before any gh call, so the section stays offline.
+func renderEntryPoint(t *testing.T) string {
+	t.Helper()
+	binary := filepath.Join(t.TempDir(), "gh-user-attachments")
+	build := exec.Command("go", "build", "-o", binary, "../..")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build binary: %v\n%s", err, output)
+	}
+
+	var out strings.Builder
+	out.WriteString("# entry point (representative: argv that returns before any gh call)\n")
+	for _, arguments := range [][]string{
+		{"--help"},
+		{"--version"},
+		{"upload"},
+		{"bogus"},
+	} {
+		command := exec.Command(binary, arguments...)
+		var stdout, stderr bytes.Buffer
+		command.Stdout = &stdout
+		command.Stderr = &stderr
+		err := command.Run()
+		code := 0
+		var exit *exec.ExitError
+		switch {
+		case err == nil:
+		case errors.As(err, &exit):
+			code = exit.ExitCode()
+		default:
+			t.Fatalf("run %v: %v", arguments, err)
+		}
+		fmt.Fprintf(&out, "\n$ gh-user-attachments %s\n", strings.Join(arguments, " "))
+		fmt.Fprintf(&out, "exit %d\n", code)
+		writeStream(&out, "stdout", stdout.String())
+		writeStream(&out, "stderr", stderr.String())
 	}
 	return out.String()
 }
