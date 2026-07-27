@@ -1,0 +1,32 @@
+# entry point (representative: argv that returns before any gh call)
+
+$ gh-user-attachments --help
+exit 0
+--- stdout (empty) ---
+--- stderr ---
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>
+
+$ gh-user-attachments --version
+exit 0
+--- stdout ---
+gh-user-attachments dev
+--- stderr (empty) ---
+
+$ gh-user-attachments upload
+exit 2
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments bogus
+exit 2
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: unknown command "bogus"
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>

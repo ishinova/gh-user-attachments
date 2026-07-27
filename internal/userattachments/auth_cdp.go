@@ -125,6 +125,17 @@ func signedInLogin(ctx context.Context) (string, error) {
 	return login, nil
 }
 
+// chromeGetenv is the environment lookup Chrome resolution performs. Tests
+// replace it to record which names the resolution reads, including the ones it
+// only reaches when the override is absent.
+var chromeGetenv = os.Getenv
+
+// chromeUserHomeDir is the home-directory lookup Chrome resolution performs.
+// Tests replace it to record whether resolution still depends on the home
+// directory, whose environment variable name is defined by the standard library
+// rather than by this package.
+var chromeUserHomeDir = os.UserHomeDir
+
 // lookPath is a seam so discovery can be exercised without depending on which
 // browsers happen to be installed on the machine running the tests.
 var lookPath = exec.LookPath
@@ -161,10 +172,10 @@ func chromeCandidates(goos, home string) []string {
 }
 
 func findChrome() (string, error) {
-	if override := os.Getenv(chromePathEnvironment); override != "" {
+	if override := chromeGetenv(chromePathEnvironment); override != "" {
 		return override, nil
 	}
-	home, err := os.UserHomeDir()
+	home, err := chromeUserHomeDir()
 	if err != nil {
 		home = ""
 	}

@@ -1,0 +1,239 @@
+# invocations (representative)
+
+$ gh-user-attachments 
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>
+
+$ gh-user-attachments help
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>
+
+$ gh-user-attachments -h
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>
+
+$ gh-user-attachments upload
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload -h
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Usage: gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  -file value
+    	local attachment file path (required; repeat 2 to 10 times)
+  -repo string
+    	target repository in OWNER/REPO form (required)
+
+$ gh-user-attachments auth
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Manage the GitHub web session used for native attachment upload.
+Usage:
+  gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
+  gh-user-attachments auth status           Show whether a usable session is configured
+  gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
+
+$ gh-user-attachments auth -h
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Manage the GitHub web session used for native attachment upload.
+Usage:
+  gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
+  gh-user-attachments auth status           Show whether a usable session is configured
+  gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
+
+$ gh-user-attachments auth help
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Manage the GitHub web session used for native attachment upload.
+Usage:
+  gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
+  gh-user-attachments auth status           Show whether a usable session is configured
+  gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
+
+$ gh-user-attachments auth status
+exit 3	reached gh: true
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: auth: read authenticated identity: surface
+
+$ gh-user-attachments auth logout
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: deleted the stored GitHub web session and tool-owned Chrome profile residue
+
+$ gh-user-attachments auth status extra
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: unknown auth command "status extra"
+Manage the GitHub web session used for native attachment upload.
+Usage:
+  gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
+  gh-user-attachments auth status           Show whether a usable session is configured
+  gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
+
+$ gh-user-attachments auth unknown
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: unknown auth command "unknown"
+Manage the GitHub web session used for native attachment upload.
+Usage:
+  gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
+  gh-user-attachments auth status           Show whether a usable session is configured
+  gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
+
+$ gh-user-attachments unknown
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: unknown command "unknown"
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>
+
+$ gh-user-attachments --version extra
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: unknown command "--version"
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>
+
+$ gh-user-attachments upload --file <dir>/first.png --file <dir>/second.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload --repo owner --file <dir>/first.png --file <dir>/second.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload --repo owner/repo/extra --file <dir>/first.png --file <dir>/second.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload --repo owner/re po --file <dir>/first.png --file <dir>/second.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload --repo owner/repo?x --file <dir>/first.png --file <dir>/second.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload --repo /repo --file <dir>/first.png --file <dir>/second.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload --repo owner/ --file <dir>/first.png --file <dir>/second.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload --repo OWNER/repo.name-1_2 --file <dir>/first.png --file <dir>/second.png --file <dir>/first.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: duplicate --file: <dir>/first.png
+
+$ gh-user-attachments upload --repo owner/repo --file <dir>/first.png
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --file must be specified between 2 and 10 times
+
+$ gh-user-attachments upload --repo owner/repo --file <dir>/first.png --file 
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: --file paths must not be empty
+
+$ gh-user-attachments upload --repo owner/repo --file <dir>/first.png --file <dir>/second.png trailing
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: unexpected arguments: trailing
+
+$ gh-user-attachments upload --repo owner/repo --unknown x
+exit 2	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+flag provided but not defined: -unknown
+Usage: gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  -file value
+    	local attachment file path (required; repeat 2 to 10 times)
+  -repo string
+    	target repository in OWNER/REPO form (required)
+gh-user-attachments: flag provided but not defined: -unknown
+
+# option parsing (representative)
+accept	--repo owner/repo --file a.png --file b.png	repo=owner/repo files=2
+accept	--repo OWNER/repo.name-1_2 --file a.png --file b.png	repo=OWNER/repo.name-1_2 files=2
+reject	--repo owner --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/ --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo /repo --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/repo/extra --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/re po --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/repo?x --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/repo#x --file a.png --file b.png	--repo must use OWNER/REPO form
+reject	--repo owner/repo --file a.png	--file must be specified between 2 and 10 times
+reject	--repo owner/repo --file a.png --file  	--file paths must not be empty
+accept	--repo owner/repo --file a.png --file a.png	repo=owner/repo files=2
+
+# --file count (representative, 0..16)
+0	reject
+1	reject
+2	accept
+3	accept
+4	accept
+5	accept
+6	accept
+7	accept
+8	accept
+9	accept
+10	accept
+11	reject
+12	reject
+13	reject
+14	reject
+15	reject
+16	reject
