@@ -1,0 +1,22 @@
+# upload output (representative)
+
+## both files finalize
+exit 0
+--- stdout ---
+https://github.com/user-attachments/assets/00000044-0044-0044-0044-000000000044
+https://github.com/user-attachments/assets/00000055-0055-0055-0055-000000000055
+--- stderr (empty) ---
+
+## second file fails after remote change
+exit 4
+--- stdout ---
+https://github.com/user-attachments/assets/00000044-0044-0044-0044-000000000044
+--- stderr ---
+gh-user-attachments: upload: surface
+gh-user-attachments: stdout contains only completed result URLs; GitHub may also have created incomplete remote state
+
+## first file fails before remote change
+exit 3
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: upload: surface

@@ -9,11 +9,39 @@ Usage:
   gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
   gh-user-attachments auth <login|logout|status>
 
+$ gh-user-attachments help
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>
+
+$ gh-user-attachments -h
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Upload multiple files as native GitHub user attachments.
+Usage:
+  gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  gh-user-attachments auth <login|logout|status>
+
 $ gh-user-attachments upload
 exit 2	reached gh: false
 --- stdout (empty) ---
 --- stderr ---
 gh-user-attachments: --repo must use OWNER/REPO form
+
+$ gh-user-attachments upload -h
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Usage: gh-user-attachments upload --repo OWNER/REPO --file PATH --file PATH [--file PATH ...]
+  -file value
+    	local attachment file path (required; repeat 2 to 10 times)
+  -repo string
+    	target repository in OWNER/REPO form (required)
 
 $ gh-user-attachments auth
 exit 0	reached gh: false
@@ -24,6 +52,38 @@ Usage:
   gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
   gh-user-attachments auth status           Show whether a usable session is configured
   gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
+
+$ gh-user-attachments auth -h
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Manage the GitHub web session used for native attachment upload.
+Usage:
+  gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
+  gh-user-attachments auth status           Show whether a usable session is configured
+  gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
+
+$ gh-user-attachments auth help
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+Manage the GitHub web session used for native attachment upload.
+Usage:
+  gh-user-attachments auth login            Sign in via a tool-owned Chrome window (CDP) and store the session as a 0600 file
+  gh-user-attachments auth status           Show whether a usable session is configured
+  gh-user-attachments auth logout           Delete the stored session and tool-owned Chrome profile residue
+
+$ gh-user-attachments auth status
+exit 3	reached gh: true
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: auth: read authenticated identity: surface
+
+$ gh-user-attachments auth logout
+exit 0	reached gh: false
+--- stdout (empty) ---
+--- stderr ---
+gh-user-attachments: deleted the stored GitHub web session and tool-owned Chrome profile residue
 
 $ gh-user-attachments auth status extra
 exit 2	reached gh: false
@@ -159,7 +219,7 @@ reject	--repo owner/repo --file a.png	--file must be specified between 2 and 10 
 reject	--repo owner/repo --file a.png --file  	--file paths must not be empty
 accept	--repo owner/repo --file a.png --file a.png	repo=owner/repo files=2
 
-# --file count (total over 0..maxFiles+1)
+# --file count (representative, 0..16)
 0	reject
 1	reject
 2	accept
@@ -172,3 +232,8 @@ accept	--repo owner/repo --file a.png --file a.png	repo=owner/repo files=2
 9	accept
 10	accept
 11	reject
+12	reject
+13	reject
+14	reject
+15	reject
+16	reject

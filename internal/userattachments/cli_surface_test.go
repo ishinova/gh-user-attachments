@@ -45,6 +45,18 @@ const goldenVersion = "0.0.0-golden"
 
 const cliSurfaceDir = "testdata/cli"
 
+// enumWalkBound spans every value a one-byte enum holds. It is a literal rather
+// than a bound derived from the enum types so that widening a type cannot turn
+// the walk into a hang; the recorded domain bound catches the widening instead.
+const enumWalkBound = 255
+
+// fileCountLadder spans the --file cardinalities recorded in the golden. The
+// domain is unbounded so the ladder is representative, and its span is a
+// literal rather than maxFiles+1: deriving it from the constant under test
+// would let the accepted set and the recorded span move together and leave the
+// rows identical.
+const fileCountLadder = 16
+
 // errSurface stands in for any failure when driving the exit-code mapping. Only
 // its presence matters to exitCodeFor, never its text.
 var errSurface = errors.New("surface")
@@ -55,6 +67,7 @@ func cliSurfaceSections() map[string]func(*testing.T) string {
 		"upload-help.golden":    func(t *testing.T) string { return runForSurface(t, "upload", "--help") },
 		"auth-help.golden":      func(t *testing.T) string { return runForSurface(t, "auth", "--help") },
 		"invocation.golden":     renderInvocations,
+		"upload-output.golden":  renderUploadOutput,
 		"contract.golden":       renderContract,
 		"files.golden":          renderFileAdmission,
 	}
@@ -148,12 +161,27 @@ func renderInvocations(t *testing.T) string {
 	writePNG(t, first)
 	writePNG(t, second)
 
+	// auth dispatches only after opening the session store, so the state
+	// directory is redirected into the temporary directory normalizePaths
+	// rewrites. auth login is deliberately absent from the matrix: it launches a
+	// browser.
+	t.Setenv("HOME", directory)
+	t.Setenv("XDG_CONFIG_HOME", directory)
+	t.Setenv(githubSessionEnvironment, "")
+
 	var out strings.Builder
 	out.WriteString("# invocations (representative)\n")
 	for _, arguments := range [][]string{
 		{},
+		{"help"},
+		{"-h"},
 		{"upload"},
+		{"upload", "-h"},
 		{"auth"},
+		{"auth", "-h"},
+		{"auth", "help"},
+		{"auth", "status"},
+		{"auth", "logout"},
 		{"auth", "status", "extra"},
 		{"auth", "unknown"},
 		{"unknown"},
@@ -216,10 +244,11 @@ func renderInvocations(t *testing.T) string {
 		fmt.Fprintf(&out, "accept\t%s\trepo=%s files=%d\n", strings.Join(arguments, " "), parsed.repository, len(parsed.files))
 	}
 
-	// The upper bound is finite and cheap to walk, so the file count is total
-	// rather than sampled at its edges.
-	out.WriteString("\n# --file count (total over 0..maxFiles+1)\n")
-	for count := 0; count <= maxFiles+1; count++ {
+	// The cardinality domain is unbounded, so this ladder is representative. It
+	// runs past the current bound rather than stopping at it, which is what lets
+	// an isolated acceptance above the bound show up as a changed row.
+	fmt.Fprintf(&out, "\n# --file count (representative, 0..%d)\n", fileCountLadder)
+	for count := 0; count <= fileCountLadder; count++ {
 		arguments := []string{"--repo", "owner/repo"}
 		for index := 0; index < count; index++ {
 			arguments = append(arguments, "--file", fmt.Sprintf("%d.png", index))
@@ -230,6 +259,61 @@ func renderInvocations(t *testing.T) string {
 			verdict = "reject"
 		}
 		fmt.Fprintf(&out, "%d\t%s\n", count, verdict)
+	}
+	return out.String()
+}
+
+// renderUploadOutput drives run() past local validation with a scripted
+// uploader so the success and partial-failure output reaches a golden. No other
+// section records it: every row in the invocation matrix stops at validation and
+// renderContract calls exitCodeFor directly, so moving completed URLs to stderr,
+// changing their delimiter or order, or dropping the exit 4 note would leave
+// every registered file unchanged. The uploader outcomes are representative.
+func renderUploadOutput(t *testing.T) string {
+	t.Helper()
+	previous := newRunBatchUpload
+	t.Cleanup(func() { newRunBatchUpload = previous })
+
+	paths := batchTestPaths(t)
+	directory := filepath.Dir(paths[0])
+	firstURL := canonicalAssetURL(0x44)
+	secondURL := canonicalAssetURL(0x55)
+
+	var out strings.Builder
+	out.WriteString("# upload output (representative)\n")
+	for _, scenario := range []struct {
+		name     string
+		outcomes []fileUploadResult
+	}{
+		{"both files finalize", []fileUploadResult{
+			{URL: firstURL, RemoteState: remoteChanged},
+			{URL: secondURL, RemoteState: remoteChanged},
+		}},
+		{"second file fails after remote change", []fileUploadResult{
+			{URL: firstURL, RemoteState: remoteChanged},
+			{RemoteState: remoteChanged, FailedPhase: phaseObjectUpload, Err: errSurface},
+		}},
+		{"first file fails before remote change", []fileUploadResult{
+			{FailedPhase: phasePreparation, Err: errSurface},
+		}},
+	} {
+		outcomes := scenario.outcomes
+		newRunBatchUpload = func(runner commandRunner, _ ...batchOption) batchUpload {
+			return newBatchUpload(runner, withUploader(sequenceUploader(outcomes)))
+		}
+		runner := &scriptedRunner{t: t, calls: []scriptedCall{
+			{body: `{"id":123}`},
+			{body: `{"login":"owner"}`},
+		}}
+		var stdout, stderr bytes.Buffer
+		code := run(context.Background(), []string{
+			"upload", "--repo", "owner/repo",
+			"--file", paths[0],
+			"--file", paths[1],
+		}, &stdout, &stderr, runner.Run)
+		fmt.Fprintf(&out, "\n## %s\nexit %d\n", scenario.name, code)
+		writeStream(&out, "stdout", normalizePaths(stdout.String(), directory))
+		writeStream(&out, "stderr", normalizePaths(stderr.String(), directory))
 	}
 	return out.String()
 }
@@ -255,21 +339,26 @@ func renderContract(t *testing.T) string {
 	out.WriteString("# version line\n")
 	out.WriteString(stdout.String())
 
-	// exitCodeFor branches on four inputs whose domains are finite: two booleans
-	// and two unsigned enums. The walk covers every value of all four and emits a
-	// row wherever the result changes, so the table is total over the domain
-	// rather than over the constants named today. The domain bound is recorded
-	// too: widening either enum type moves this file and forces the walk to be
-	// reconsidered rather than silently leaving values uncovered.
-	stateBound := int(^remoteStateCertainty(0))
-	phaseBound := int(^failurePhase(0))
-	fmt.Fprintf(&out, "\n# exit codes (total over remote 0..%d, phase 0..%d)\n", stateBound, phaseBound)
+	// The enum domain bound is recorded rather than used as the loop bound.
+	// Deriving the bound from the type would turn a widening to uint16 into
+	// 17 billion exitCodeFor calls before assertGolden could report anything, so
+	// the promised guard would hang mise run check instead of failing it. Here a
+	// widening moves these two rows and fails in a second, and the walk itself
+	// stays at the fixed span below.
+	fmt.Fprintf(&out, "\n# enum domain bound (the walk below is total while both are %d)\n", enumWalkBound)
+	fmt.Fprintf(&out, "remoteStateCertainty\t%d\nfailurePhase\t%d\n", uint64(^remoteStateCertainty(0)), uint64(^failurePhase(0)))
+
+	// exitCodeFor branches on four inputs: two booleans and two unsigned enums.
+	// The walk covers every value both enums hold at their current width and
+	// emits a row wherever the result changes, so the table is total over that
+	// span rather than over the constants named today.
+	fmt.Fprintf(&out, "\n# exit codes (total over remote 0..%d, phase 0..%d)\n", enumWalkBound, enumWalkBound)
 	out.WriteString("err\turls\tremote>=\tphase>=\texit\n")
 	for _, failed := range []bool{false, true} {
 		for _, finalized := range []bool{false, true} {
 			last := -1
-			for state := 0; state <= stateBound; state++ {
-				for phase := 0; phase <= phaseBound; phase++ {
+			for state := 0; state <= enumWalkBound; state++ {
+				for phase := 0; phase <= enumWalkBound; phase++ {
 					outcome := batchOutcome{
 						RemoteState: remoteStateCertainty(state),
 						FailedPhase: failurePhase(phase),
@@ -335,6 +424,17 @@ func renderContract(t *testing.T) string {
 	for _, name := range requested {
 		fmt.Fprintf(&out, "%s\n", name)
 	}
+
+	// findChrome reads an override that resolveNativeSession never touches, and
+	// it calls os.Getenv directly, so no recording lookup can observe it. Setting
+	// a sentinel and asking whether findChrome returns it records the name
+	// through behavior: renaming or dropping the variable stops the override from
+	// being honored and moves this row.
+	out.WriteString("\n# environment read during Chrome resolution\n")
+	sentinel := filepath.Join(t.TempDir(), "chrome")
+	t.Setenv(chromePathEnvironment, sentinel)
+	resolved, err := findChrome()
+	fmt.Fprintf(&out, "%s\thonored=%t\n", chromePathEnvironment, err == nil && resolved == sentinel)
 
 	return out.String()
 }
@@ -409,7 +509,82 @@ func renderFileAdmission(t *testing.T) string {
 			fmt.Fprintf(&out, "materialize\taccept\t%s\t%s\t%d\n", loaded.Name, loaded.MediaType, len(loaded.Content))
 		}
 	}
+
+	out.WriteString(renderSupportedTypes(t))
 	return out.String()
+}
+
+// sizeProbes sit one byte above each documented size limit. A row records which
+// probes loadAsset rejects for size, which places every extension in its size
+// category without transcribing the category from the table.
+var sizeProbes = []struct {
+	label string
+	bytes int64
+}{
+	{"10Mi+1", 10<<20 + 1},
+	{"25Mi+1", 25<<20 + 1},
+	{"100Mi+1", 100<<20 + 1},
+}
+
+// renderSupportedTypes walks every advertised extension through loadAsset. The
+// domain is the advertised set itself, so dropping an extension, changing its
+// media type, or moving its size limit moves this section; the representative
+// groups above cannot, because they admit only a handful of extensions.
+//
+// A verdict is `accept`, `size` when loadAsset rejected the probe for exceeding
+// the limit, or `other` when it rejected the grown file for any other reason
+// such as a container parse that trailing zero bytes invalidate.
+func renderSupportedTypes(t *testing.T) string {
+	t.Helper()
+	extensions := make([]string, 0, len(supportedFileTypes))
+	for extension := range supportedFileTypes {
+		extensions = append(extensions, extension)
+	}
+	sort.Strings(extensions)
+
+	var out strings.Builder
+	out.WriteString("\n# advertised extensions (total over the advertised set)\n")
+	out.WriteString("extension\tmedia type\t" + probeLabels() + "\n")
+	for _, extension := range extensions {
+		directory := t.TempDir()
+		path := filepath.Join(directory, "attachment"+extension)
+		writeSupportedTestFile(t, path)
+
+		asset, err := loadAsset(path)
+		if err != nil {
+			fmt.Fprintf(&out, "%s\treject\t%s\n", extension, normalizePaths(err.Error(), directory))
+			continue
+		}
+		verdicts := make([]string, 0, len(sizeProbes))
+		for _, probe := range sizeProbes {
+			if err := os.Truncate(path, probe.bytes); err != nil {
+				t.Fatalf("truncate %s: %v", path, err)
+			}
+			verdicts = append(verdicts, sizeVerdict(path))
+		}
+		fmt.Fprintf(&out, "%s\t%s\t%s\n", extension, asset.MediaType, strings.Join(verdicts, "\t"))
+	}
+	return out.String()
+}
+
+func probeLabels() string {
+	labels := make([]string, 0, len(sizeProbes))
+	for _, probe := range sizeProbes {
+		labels = append(labels, probe.label)
+	}
+	return strings.Join(labels, "\t")
+}
+
+func sizeVerdict(path string) string {
+	_, err := loadAsset(path)
+	switch {
+	case err == nil:
+		return "accept"
+	case strings.Contains(err.Error(), "maximum is"):
+		return "size"
+	default:
+		return "other"
+	}
 }
 
 func writeFile(t *testing.T, path string, content []byte) {
