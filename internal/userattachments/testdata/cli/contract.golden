@@ -30,13 +30,15 @@ accept	https://github.com/user-attachments/assets/%300000000-1111-2222-3333-4444
 accept	https://github.com/user-attachments/assets/00000000%2D1111-2222-3333-444444444444
 reject	https://github.com/user-attachments/../user-attachments/assets/00000000-1111-2222-3333-444444444444
 
-# file count
-min	2
-max	10
-
 # environment read during session resolution
 GH_USER_ATTACHMENTS_SESSION
 
 # environment read during Chrome resolution
 override honored	true
 GH_USER_ATTACHMENTS_CHROME
+home directory consulted	true
+
+# candidate resolution per platform (total over the branches chromeCandidates names)
+darwin	home=true	PATH=false
+linux	home=false	PATH=true
+windows	home=false	PATH=false

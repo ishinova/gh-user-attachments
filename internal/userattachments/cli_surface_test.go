@@ -406,8 +406,10 @@ func renderContract(t *testing.T) string {
 		fmt.Fprintf(&out, "%s\t%s\n", verdict, candidate)
 	}
 
-	out.WriteString("\n# file count\n")
-	fmt.Fprintf(&out, "min\t%d\nmax\t%d\n", minFiles, maxFiles)
+	// The accepted --file cardinalities are recorded in invocation.golden, where
+	// parseOptions decides each row. Serializing minFiles and maxFiles here would
+	// record the declarations instead, and would move this file when a constant
+	// that validation no longer consults is edited.
 
 	// The environment names come from a recording lookup rather than from the
 	// constants, so renaming one moves this file. Session resolution is the path
@@ -429,8 +431,7 @@ func renderContract(t *testing.T) string {
 	// override is recorded through behavior, by asking whether findChrome returns
 	// the sentinel it was given, and the remaining names through a recording
 	// lookup with no override set, which is the only run that reaches the
-	// fallback. Names resolved outside chromeGetenv, such as the home directory
-	// os.UserHomeDir reads, are not visible here.
+	// fallback.
 	out.WriteString("\n# environment read during Chrome resolution\n")
 	sentinel := filepath.Join(t.TempDir(), "chrome")
 	t.Setenv(chromePathEnvironment, sentinel)
@@ -438,17 +439,53 @@ func renderContract(t *testing.T) string {
 	fmt.Fprintf(&out, "override honored\t%t\n", err == nil && resolved == sentinel)
 
 	previousGetenv := chromeGetenv
-	t.Cleanup(func() { chromeGetenv = previousGetenv })
+	previousHome := chromeUserHomeDir
+	t.Cleanup(func() {
+		chromeGetenv = previousGetenv
+		chromeUserHomeDir = previousHome
+	})
 	var chromeRequested []string
 	chromeGetenv = func(name string) string {
 		chromeRequested = append(chromeRequested, name)
 		return ""
 	}
+	homeConsulted := false
+	chromeUserHomeDir = func() (string, error) {
+		homeConsulted = true
+		return "", nil
+	}
 	_, _ = findChrome()
 	chromeGetenv = previousGetenv
+	chromeUserHomeDir = previousHome
 	sort.Strings(chromeRequested)
 	for _, name := range slices.Compact(chromeRequested) {
 		fmt.Fprintf(&out, "%s\n", name)
+	}
+	fmt.Fprintf(&out, "home directory consulted\t%t\n", homeConsulted)
+
+	// The fallback also depends on the home directory and on PATH, whose
+	// variable names the standard library owns rather than this package. What
+	// this package decides is which of them each platform's candidates need, and
+	// that is recorded by asking chromeCandidates directly: a candidate carrying
+	// the sentinel home needs the home directory, and one that is not an absolute
+	// path is resolved through PATH. The run above takes the host platform's
+	// branch only, so every branch is walked here instead.
+	out.WriteString("\n# candidate resolution per platform (total over the branches chromeCandidates names)\n")
+	for _, platform := range []string{"darwin", "linux", "windows"} {
+		// The sentinel is absolute so that a candidate built from it stays
+		// absolute, which is what separates a home-relative candidate from one
+		// PATH has to resolve.
+		const homeSentinel = "/home-sentinel"
+		usesHome, usesPath := false, false
+		for _, candidate := range chromeCandidates(platform, homeSentinel) {
+			if strings.Contains(candidate, homeSentinel) {
+				usesHome = true
+			}
+			if !filepath.IsAbs(candidate) {
+				usesPath = true
+			}
+		}
+		fmt.Fprintf(&out, "%s\thome=%t\tPATH=%t\n", platform, usesHome, usesPath)
 	}
 
 	return out.String()
