@@ -6,12 +6,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -134,7 +136,8 @@ func TestEnvironmentReadsStayRecordable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list package files: %v", err)
 	}
-	seam := regexp.MustCompile(`^var \w+ = os\.(Getenv|UserConfigDir|UserHomeDir)$`)
+	seam := regexp.MustCompile(`^var (\w+) = os\.(Getenv|UserConfigDir|UserHomeDir)$`)
+	declared := map[string]string{}
 	for _, entry := range entries {
 		if strings.HasSuffix(entry, "_test.go") {
 			continue
@@ -148,7 +151,8 @@ func TestEnvironmentReadsStayRecordable(t *testing.T) {
 			if strings.HasPrefix(trimmed, "//") || !containsAny(trimmed, environmentLookups) {
 				continue
 			}
-			if seam.MatchString(trimmed) {
+			if match := seam.FindStringSubmatch(trimmed); match != nil {
+				declared[match[1]] = entry
 				continue
 			}
 			if _, allowed := environmentLookupExceptions[entry+":"+trimmed]; allowed {
@@ -159,6 +163,37 @@ func TestEnvironmentReadsStayRecordable(t *testing.T) {
 				"or add the call site to environmentLookupExceptions with its reason", entry, trimmed)
 		}
 	}
+
+	// A seam that no section replaces records nothing, so declaring one is not
+	// enough: the environment it reads still bypasses every golden. Rendering the
+	// section that owns them reports which seams it actually drove.
+	environmentSeamsMutex.Lock()
+	observedEnvironmentSeams = map[string]bool{}
+	environmentSeamsMutex.Unlock()
+	_ = renderContract(t)
+	environmentSeamsMutex.Lock()
+	observed := maps.Clone(observedEnvironmentSeams)
+	environmentSeamsMutex.Unlock()
+	for name, file := range declared {
+		if !observed[name] {
+			t.Errorf("%s declares the environment seam %s, but no registered section replaces it;\n"+
+				"drive it from a renderer so the names it reads reach a golden", file, name)
+		}
+	}
+}
+
+// observedEnvironmentSeams records which environment seams a render run
+// replaced. noteEnvironmentSeam is called at each replacement so the guard test
+// can compare what the package declares against what a section actually drives.
+var (
+	environmentSeamsMutex    sync.Mutex
+	observedEnvironmentSeams = map[string]bool{}
+)
+
+func noteEnvironmentSeam(name string) {
+	environmentSeamsMutex.Lock()
+	defer environmentSeamsMutex.Unlock()
+	observedEnvironmentSeams[name] = true
 }
 
 func containsAny(line string, needles []string) bool {
@@ -521,11 +556,13 @@ func renderContract(t *testing.T) string {
 		chromeUserHomeDir = previousHome
 	})
 	var chromeRequested []string
+	noteEnvironmentSeam("chromeGetenv")
 	chromeGetenv = func(name string) string {
 		chromeRequested = append(chromeRequested, name)
 		return ""
 	}
 	homeConsulted := false
+	noteEnvironmentSeam("chromeUserHomeDir")
 	chromeUserHomeDir = func() (string, error) {
 		homeConsulted = true
 		return "", nil
@@ -545,6 +582,7 @@ func renderContract(t *testing.T) string {
 	previousConfigDir := toolStateUserConfigDir
 	t.Cleanup(func() { toolStateUserConfigDir = previousConfigDir })
 	configConsulted := false
+	noteEnvironmentSeam("toolStateUserConfigDir")
 	toolStateUserConfigDir = func() (string, error) {
 		configConsulted = true
 		return "", errSurface
