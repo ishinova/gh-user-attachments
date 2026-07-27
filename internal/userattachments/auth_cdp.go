@@ -123,8 +123,13 @@ func signedInLogin(ctx context.Context) (string, error) {
 	return login, nil
 }
 
+// chromeGetenv is the environment lookup Chrome resolution performs. Tests
+// replace it to record which names the resolution reads, including the ones it
+// only reaches when the override is absent.
+var chromeGetenv = os.Getenv
+
 func findChrome() (string, error) {
-	if override := os.Getenv(chromePathEnvironment); override != "" {
+	if override := chromeGetenv(chromePathEnvironment); override != "" {
 		return override, nil
 	}
 	candidates := []string{"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"}

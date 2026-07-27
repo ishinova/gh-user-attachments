@@ -425,16 +425,31 @@ func renderContract(t *testing.T) string {
 		fmt.Fprintf(&out, "%s\n", name)
 	}
 
-	// findChrome reads an override that resolveNativeSession never touches, and
-	// it calls os.Getenv directly, so no recording lookup can observe it. Setting
-	// a sentinel and asking whether findChrome returns it records the name
-	// through behavior: renaming or dropping the variable stops the override from
-	// being honored and moves this row.
+	// Chrome resolution reads names resolveNativeSession never touches. The
+	// override is recorded through behavior, by asking whether findChrome returns
+	// the sentinel it was given, and the remaining names through a recording
+	// lookup with no override set, which is the only run that reaches the
+	// fallback. Names resolved outside chromeGetenv, such as the home directory
+	// os.UserHomeDir reads, are not visible here.
 	out.WriteString("\n# environment read during Chrome resolution\n")
 	sentinel := filepath.Join(t.TempDir(), "chrome")
 	t.Setenv(chromePathEnvironment, sentinel)
 	resolved, err := findChrome()
-	fmt.Fprintf(&out, "%s\thonored=%t\n", chromePathEnvironment, err == nil && resolved == sentinel)
+	fmt.Fprintf(&out, "override honored\t%t\n", err == nil && resolved == sentinel)
+
+	previousGetenv := chromeGetenv
+	t.Cleanup(func() { chromeGetenv = previousGetenv })
+	var chromeRequested []string
+	chromeGetenv = func(name string) string {
+		chromeRequested = append(chromeRequested, name)
+		return ""
+	}
+	_, _ = findChrome()
+	chromeGetenv = previousGetenv
+	sort.Strings(chromeRequested)
+	for _, name := range slices.Compact(chromeRequested) {
+		fmt.Fprintf(&out, "%s\n", name)
+	}
 
 	return out.String()
 }
@@ -514,37 +529,43 @@ func renderFileAdmission(t *testing.T) string {
 	return out.String()
 }
 
-// sizeProbes sit one byte above each documented size limit. A row records which
-// probes loadAsset rejects for size, which places every extension in its size
-// category without transcribing the category from the table.
-var sizeProbes = []struct {
-	label string
-	bytes int64
-}{
-	{"10Mi+1", 10<<20 + 1},
-	{"25Mi+1", 25<<20 + 1},
-	{"100Mi+1", 100<<20 + 1},
-}
+// sizeSearchCeiling bounds the bisection that finds each extension's admitted
+// size. It is a literal above every documented limit rather than a value read
+// from the size table, so lowering a limit moves the discovered cutoff instead
+// of moving the search with it.
+const sizeSearchCeiling = 128 << 20
 
-// renderSupportedTypes walks every advertised extension through loadAsset. The
-// domain is the advertised set itself, so dropping an extension, changing its
-// media type, or moving its size limit moves this section; the representative
-// groups above cannot, because they admit only a handful of extensions.
+// renderSupportedTypes walks every extension through loadAsset and records what
+// the validator does with it. The candidate domain is the union of the set
+// GitHub documents and the set the implementation advertises, so dropping an
+// extension flips its row to a rejection instead of removing the row, and
+// adding one appends a row. The extension domain is every string, so this is
+// not total over it: an extension reached only through future normalization
+// would not appear.
 //
-// A verdict is `accept`, `size` when loadAsset rejected the probe for exceeding
-// the limit, or `other` when it rejected the grown file for any other reason
-// such as a container parse that trailing zero bytes invalidate.
+// The admitted size is discovered by bisection through loadAsset rather than
+// probed at the documented limits. Fixed probes at the limits cannot see a
+// limit that moves between two of them; a discovered cutoff moves whenever the
+// limit does.
 func renderSupportedTypes(t *testing.T) string {
 	t.Helper()
-	extensions := make([]string, 0, len(supportedFileTypes))
+	candidates := make(map[string]struct{}, len(documentedFileTypes)+len(supportedFileTypes))
+	for extension := range documentedFileTypes {
+		candidates[extension] = struct{}{}
+	}
 	for extension := range supportedFileTypes {
+		candidates[extension] = struct{}{}
+	}
+	extensions := make([]string, 0, len(candidates))
+	for extension := range candidates {
 		extensions = append(extensions, extension)
 	}
 	sort.Strings(extensions)
 
 	var out strings.Builder
-	out.WriteString("\n# advertised extensions (total over the advertised set)\n")
-	out.WriteString("extension\tmedia type\t" + probeLabels() + "\n")
+	out.WriteString("\n# extensions (total over the documented and advertised sets)\n")
+	out.WriteString("extension\tmedia type\tlargest admitted bytes\n")
+	var known []int64
 	for _, extension := range extensions {
 		directory := t.TempDir()
 		path := filepath.Join(directory, "attachment"+extension)
@@ -555,36 +576,65 @@ func renderSupportedTypes(t *testing.T) string {
 			fmt.Fprintf(&out, "%s\treject\t%s\n", extension, normalizePaths(err.Error(), directory))
 			continue
 		}
-		verdicts := make([]string, 0, len(sizeProbes))
-		for _, probe := range sizeProbes {
-			if err := os.Truncate(path, probe.bytes); err != nil {
-				t.Fatalf("truncate %s: %v", path, err)
-			}
-			verdicts = append(verdicts, sizeVerdict(path))
+		limit, ok := discoverSizeLimit(t, path, asset.Size, known)
+		if !ok {
+			fmt.Fprintf(&out, "%s\t%s\tundetermined\n", extension, asset.MediaType)
+			continue
 		}
-		fmt.Fprintf(&out, "%s\t%s\t%s\n", extension, asset.MediaType, strings.Join(verdicts, "\t"))
+		if !slices.Contains(known, limit) {
+			known = append(known, limit)
+		}
+		fmt.Fprintf(&out, "%s\t%s\t%d\n", extension, asset.MediaType, limit)
 	}
 	return out.String()
 }
 
-func probeLabels() string {
-	labels := make([]string, 0, len(sizeProbes))
-	for _, probe := range sizeProbes {
-		labels = append(labels, probe.label)
+// discoverSizeLimit returns the largest byte count loadAsset admits for path.
+// Limits already seen are tried first because extensions share them, and the
+// bisection runs only when none of them fits. It reports false when the file is
+// rejected one byte past the found cutoff for a reason other than its size,
+// which would make the cutoff meaningless.
+func discoverSizeLimit(t *testing.T, path string, admitted int64, known []int64) (int64, bool) {
+	t.Helper()
+	for _, candidate := range known {
+		if candidate >= admitted && admitsSize(t, path, candidate) && !admitsSize(t, path, candidate+1) {
+			return candidate, rejectedForSize(t, path, candidate+1)
+		}
 	}
-	return strings.Join(labels, "\t")
+	low, high := admitted, int64(sizeSearchCeiling)
+	if admitsSize(t, path, high) {
+		t.Fatalf("%s admits %d bytes; raise sizeSearchCeiling", path, high)
+	}
+	for high-low > 1 {
+		middle := low + (high-low)/2
+		if admitsSize(t, path, middle) {
+			low = middle
+			continue
+		}
+		high = middle
+	}
+	return low, rejectedForSize(t, path, low+1)
 }
 
-func sizeVerdict(path string) string {
-	_, err := loadAsset(path)
-	switch {
-	case err == nil:
-		return "accept"
-	case strings.Contains(err.Error(), "maximum is"):
-		return "size"
-	default:
-		return "other"
+func admitsSize(t *testing.T, path string, size int64) bool {
+	t.Helper()
+	if err := os.Truncate(path, size); err != nil {
+		t.Fatalf("truncate %s: %v", path, err)
 	}
+	_, err := loadAsset(path)
+	return err == nil
+}
+
+// rejectedForSize reports whether loadAsset rejects the file at this size for
+// exceeding the limit rather than for its content, which trailing zero bytes
+// could invalidate for some containers.
+func rejectedForSize(t *testing.T, path string, size int64) bool {
+	t.Helper()
+	if err := os.Truncate(path, size); err != nil {
+		t.Fatalf("truncate %s: %v", path, err)
+	}
+	_, err := loadAsset(path)
+	return err != nil && strings.Contains(err.Error(), "maximum is")
 }
 
 func writeFile(t *testing.T, path string, content []byte) {

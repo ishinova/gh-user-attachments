@@ -38,4 +38,5 @@ max	10
 GH_USER_ATTACHMENTS_SESSION
 
 # environment read during Chrome resolution
-GH_USER_ATTACHMENTS_CHROME	honored=true
+override honored	true
+GH_USER_ATTACHMENTS_CHROME

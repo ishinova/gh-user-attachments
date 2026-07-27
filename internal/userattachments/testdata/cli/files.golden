@@ -37,72 +37,72 @@ load	reject	duplicate --file: <dir>/valid.png
 <dir>/valid.png <dir>
 load	reject	not a regular file: <dir>
 
-# advertised extensions (total over the advertised set)
-extension	media type	10Mi+1	25Mi+1	100Mi+1
-.bmp	image/bmp	size	size	size
-.c	text/x-c	accept	size	size
-.copilotmd	text/markdown	accept	size	size
-.cpp	text/x-c++	accept	size	size
-.cpuprofile	application/json	accept	size	size
-.cs	text/plain	accept	size	size
-.css	text/css	accept	size	size
-.csv	text/csv	accept	size	size
-.debug	text/plain	accept	size	size
-.dmp	application/octet-stream	accept	size	size
-.doc	application/msword	accept	size	size
-.docx	application/vnd.openxmlformats-officedocument.wordprocessingml.document	accept	size	size
-.drawio	application/xml	accept	size	size
-.eml	message/rfc822	accept	size	size
-.fodg	application/vnd.oasis.opendocument.graphics-flat-xml	accept	size	size
-.fodp	application/vnd.oasis.opendocument.presentation-flat-xml	accept	size	size
-.fods	application/vnd.oasis.opendocument.spreadsheet-flat-xml	accept	size	size
-.fodt	application/vnd.oasis.opendocument.text-flat-xml	accept	size	size
-.gif	image/gif	size	size	size
-.gz	application/gzip	accept	size	size
-.htm	text/html	accept	size	size
-.html	text/html	accept	size	size
-.ipynb	application/x-ipynb+json	accept	size	size
-.java	text/x-java-source	accept	size	size
-.jpeg	image/jpeg	size	size	size
-.jpg	image/jpeg	size	size	size
-.js	text/javascript	accept	size	size
-.json	application/json	accept	size	size
-.jsonc	application/json	accept	size	size
-.log	text/plain	accept	size	size
-.md	text/markdown	accept	size	size
-.mov	video/quicktime	accept	accept	size
-.mp3	audio/mpeg	accept	size	size
-.mp4	video/mp4	accept	accept	size
-.msg	application/vnd.ms-outlook	accept	size	size
-.odf	application/vnd.oasis.opendocument.formula	accept	size	size
-.odg	application/vnd.oasis.opendocument.graphics	accept	size	size
-.odp	application/vnd.oasis.opendocument.presentation	accept	size	size
-.ods	application/vnd.oasis.opendocument.spreadsheet	accept	size	size
-.odt	application/vnd.oasis.opendocument.text	accept	size	size
-.patch	text/x-diff	accept	size	size
-.pdb	application/octet-stream	accept	size	size
-.pdf	application/pdf	accept	size	size
-.php	application/x-httpd-php	accept	size	size
-.png	image/png	size	size	size
-.pptx	application/vnd.openxmlformats-officedocument.presentationml.presentation	accept	size	size
-.py	text/x-python	accept	size	size
-.rtf	application/rtf	accept	size	size
-.sh	application/x-sh	accept	size	size
-.sql	application/sql	accept	size	size
-.svg	image/svg+xml	size	size	size
-.tgz	application/gzip	accept	size	size
-.tif	image/tiff	size	size	size
-.tiff	image/tiff	size	size	size
-.ts	text/typescript	accept	size	size
-.tsv	text/tab-separated-values	accept	size	size
-.tsx	text/typescript	accept	size	size
-.txt	text/plain	accept	size	size
-.wav	audio/wav	accept	size	size
-.webm	video/webm	accept	accept	size
-.xls	application/vnd.ms-excel	accept	size	size
-.xlsm	application/vnd.ms-excel.sheet.macroEnabled.12	accept	size	size
-.xlsx	application/vnd.openxmlformats-officedocument.spreadsheetml.sheet	accept	size	size
-.xml	application/xml	accept	size	size
-.yaml	application/yaml	accept	size	size
-.yml	application/yaml	accept	size	size
-.zip	application/zip	accept	size	size
+# extensions (total over the documented and advertised sets)
+extension	media type	largest admitted bytes
+.bmp	image/bmp	10485760
+.c	text/x-c	26214400
+.copilotmd	text/markdown	26214400
+.cpp	text/x-c++	26214400
+.cpuprofile	application/json	26214400
+.cs	text/plain	26214400
+.css	text/css	26214400
+.csv	text/csv	26214400
+.debug	text/plain	26214400
+.dmp	application/octet-stream	26214400
+.doc	application/msword	26214400
+.docx	application/vnd.openxmlformats-officedocument.wordprocessingml.document	26214400
+.drawio	application/xml	26214400
+.eml	message/rfc822	26214400
+.fodg	application/vnd.oasis.opendocument.graphics-flat-xml	26214400
+.fodp	application/vnd.oasis.opendocument.presentation-flat-xml	26214400
+.fods	application/vnd.oasis.opendocument.spreadsheet-flat-xml	26214400
+.fodt	application/vnd.oasis.opendocument.text-flat-xml	26214400
+.gif	image/gif	10485760
+.gz	application/gzip	26214400
+.htm	text/html	26214400
+.html	text/html	26214400
+.ipynb	application/x-ipynb+json	26214400
+.java	text/x-java-source	26214400
+.jpeg	image/jpeg	10485760
+.jpg	image/jpeg	10485760
+.js	text/javascript	26214400
+.json	application/json	26214400
+.jsonc	application/json	26214400
+.log	text/plain	26214400
+.md	text/markdown	26214400
+.mov	video/quicktime	104857600
+.mp3	audio/mpeg	26214400
+.mp4	video/mp4	104857600
+.msg	application/vnd.ms-outlook	26214400
+.odf	application/vnd.oasis.opendocument.formula	26214400
+.odg	application/vnd.oasis.opendocument.graphics	26214400
+.odp	application/vnd.oasis.opendocument.presentation	26214400
+.ods	application/vnd.oasis.opendocument.spreadsheet	26214400
+.odt	application/vnd.oasis.opendocument.text	26214400
+.patch	text/x-diff	26214400
+.pdb	application/octet-stream	26214400
+.pdf	application/pdf	26214400
+.php	application/x-httpd-php	26214400
+.png	image/png	10485760
+.pptx	application/vnd.openxmlformats-officedocument.presentationml.presentation	26214400
+.py	text/x-python	26214400
+.rtf	application/rtf	26214400
+.sh	application/x-sh	26214400
+.sql	application/sql	26214400
+.svg	image/svg+xml	10485760
+.tgz	application/gzip	26214400
+.tif	image/tiff	10485760
+.tiff	image/tiff	10485760
+.ts	text/typescript	26214400
+.tsv	text/tab-separated-values	26214400
+.tsx	text/typescript	26214400
+.txt	text/plain	26214400
+.wav	audio/wav	26214400
+.webm	video/webm	104857600
+.xls	application/vnd.ms-excel	26214400
+.xlsm	application/vnd.ms-excel.sheet.macroEnabled.12	26214400
+.xlsx	application/vnd.openxmlformats-officedocument.spreadsheetml.sheet	26214400
+.xml	application/xml	26214400
+.yaml	application/yaml	26214400
+.yml	application/yaml	26214400
+.zip	application/zip	26214400
