@@ -5,10 +5,32 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
 )
+
+// stubBuildInfo replaces the build information seam for one test.
+func stubBuildInfo(t *testing.T, mainVersion string, ok bool) {
+	t.Helper()
+	previous := readBuildInfo
+	readBuildInfo = func() (*debug.BuildInfo, bool) {
+		if !ok {
+			return nil, false
+		}
+		return &debug.BuildInfo{Main: debug.Module{Version: mainVersion}}, true
+	}
+	t.Cleanup(func() { readBuildInfo = previous })
+}
+
+// useDevelopmentVersion restores the unstamped default for one test.
+func useDevelopmentVersion(t *testing.T) {
+	t.Helper()
+	previous := Version
+	Version = developmentVersion
+	t.Cleanup(func() { Version = previous })
+}
 
 func forbidGH(t *testing.T) commandRunner {
 	return func(context.Context, ...string) (commandResult, error) {
@@ -42,6 +64,49 @@ func TestRunVersion(t *testing.T) {
 	code := run(context.Background(), []string{"--version"}, &stdout, &stderr, forbidGH(t))
 	if code != 0 || stdout.String() != "gh-user-attachments 1.2.3\n" || stderr.Len() != 0 {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+}
+
+func TestRunVersionReportsTheStampedModuleVersionWhenTheReleaseTagIsAbsent(t *testing.T) {
+	useDevelopmentVersion(t)
+	stubBuildInfo(t, "v1.0.1-0.20260724123206-795d8cc485ef+dirty", true)
+
+	var stdout, stderr bytes.Buffer
+	code := run(context.Background(), []string{"--version"}, &stdout, &stderr, forbidGH(t))
+	want := "gh-user-attachments v1.0.1-0.20260724123206-795d8cc485ef+dirty\n"
+	if code != 0 || stdout.String() != want || stderr.Len() != 0 {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+}
+
+func TestVersionInjectedByTheReleaseBuildWinsOverBuildInformation(t *testing.T) {
+	previous := Version
+	Version = "1.2.3"
+	t.Cleanup(func() { Version = previous })
+	stubBuildInfo(t, "v9.9.9", true)
+
+	if got := resolveVersion(); got != "1.2.3" {
+		t.Fatalf("resolveVersion()=%q want the injected version", got)
+	}
+}
+
+func TestVersionFallsBackToTheDefaultWhenBuildInformationIdentifiesNothing(t *testing.T) {
+	for name, info := range map[string]struct {
+		mainVersion string
+		ok          bool
+	}{
+		"no build information": {ok: false},
+		"no version control":   {mainVersion: "(devel)", ok: true},
+		"empty version":        {mainVersion: "", ok: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			useDevelopmentVersion(t)
+			stubBuildInfo(t, info.mainVersion, info.ok)
+
+			if got := resolveVersion(); got != developmentVersion {
+				t.Fatalf("resolveVersion()=%q want %q", got, developmentVersion)
+			}
+		})
 	}
 }
 
