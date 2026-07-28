@@ -390,7 +390,15 @@ func renderInvocations(t *testing.T) string {
 func renderEntryPoint(t *testing.T) string {
 	t.Helper()
 	binary := filepath.Join(t.TempDir(), "gh-user-attachments")
-	build := exec.Command("go", "build", "-o", binary, "../..")
+	// The version is stamped the way the release pipeline stamps it. Without it
+	// the binary reports whatever the toolchain derives from the surrounding
+	// checkout, which is a property of the clone rather than of the CLI: a
+	// pseudo-version in a real clone, "dev" in a linked worktree, and a
+	// different value at every commit. Stamping keeps the recorded line about
+	// the format, and a break in the injection still moves it.
+	build := exec.Command("go", "build",
+		"-ldflags", "-X github.com/ishinova/gh-user-attachments/internal/userattachments.Version="+goldenVersion,
+		"-o", binary, "../..")
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build binary: %v\n%s", err, output)
 	}
