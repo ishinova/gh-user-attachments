@@ -1,0 +1,43 @@
+# version line
+gh-user-attachments 0.0.0-golden
+
+# exit codes (total over remote 0..255, phase 0..255)
+err	urls	remote>=	phase>=	exit
+false	false	0	0	0
+false	true	0	0	0
+true	false	0	0	3
+true	false	0	1	2
+true	false	0	2	3
+true	false	1	0	4
+true	true	0	0	4
+
+# result URL (representative)
+accept	https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	http://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://user@github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://github.com:443/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://example.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://GITHUB.com/user-attachments/assets/00000000-1111-2222-3333-444444444444
+reject	https://github.com/user-attachments/assets/not-a-uuid
+reject	https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444?x=1
+accept	https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444?
+reject	https://github.com/user-attachments/assets/00000000-1111-2222-3333-444444444444#x
+accept	https://github.com/user-attachments/assets/%300000000-1111-2222-3333-444444444444
+accept	https://github.com/user-attachments/assets/00000000%2D1111-2222-3333-444444444444
+reject	https://github.com/user-attachments/../user-attachments/assets/00000000-1111-2222-3333-444444444444
+
+# environment read during session resolution
+GH_USER_ATTACHMENTS_SESSION
+
+# environment read during Chrome resolution
+override honored	true
+GH_USER_ATTACHMENTS_CHROME
+home directory consulted	true
+
+# environment read during tool state resolution
+configuration directory consulted	true
+
+# candidate resolution per platform (total over the branches chromeCandidates names)
+darwin	home=true	PATH=false
+linux	home=false	PATH=true
+windows	home=false	PATH=false
