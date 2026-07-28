@@ -12,7 +12,7 @@ Usage:
 $ gh-user-attachments --version
 exit 0
 --- stdout ---
-gh-user-attachments dev
+gh-user-attachments 0.0.0-golden
 --- stderr (empty) ---
 
 $ gh-user-attachments upload
