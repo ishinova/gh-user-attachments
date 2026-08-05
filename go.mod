@@ -3,7 +3,7 @@ module github.com/ishinova/gh-user-attachments
 go 1.26.5
 
 require (
-	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f
+	github.com/chromedp/cdproto v0.0.0-20260804232424-e85f50dbfd32
 	github.com/chromedp/chromedp v0.16.0
 )
 
