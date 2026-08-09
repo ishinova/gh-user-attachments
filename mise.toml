@@ -1,6 +1,8 @@
 [tools]
 go = "1.26.5"
 pinact = "4.1.0"
+actionlint = "1.7.12"
+gitleaks = "8.30.1"
 
 [tasks."deps:actions:update"]
 description = "Update GitHub Actions references"
@@ -31,13 +33,21 @@ trap 'rm -rf "$tmpdir"' EXIT
 diff -r "$tmpdir/licenses" third_party_licenses
 """
 
-[tasks.check]
-description = "Run formatting, dependency, license, test, vet, and release build checks"
-depends = ["licenses:check"]
+[tasks."test:go"]
+description = "Run Go dependency, test, and vet checks"
 run = """
-test -z "$(gofmt -l .)"
+go mod download
 go mod verify
 go test -race ./...
 go vet ./...
+"""
+
+[tasks.check]
+description = "Run formatting, dependency, license, test, vet, and release build checks"
+depends = ["licenses:check", "test:go"]
+run = """
+actionlint
+gitleaks detect --source . --no-git
+test -z "$(gofmt -l .)"
 ./script/build.sh v0.0.0-check
 """
