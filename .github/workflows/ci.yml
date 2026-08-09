@@ -19,5 +19,5 @@ jobs:
           cache: true
           github_token: ${{ github.token }}
           install: true
-          version: 2026.7.12
+          version: 2026.8.3
       - run: mise run check
