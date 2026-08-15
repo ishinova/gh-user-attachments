@@ -1,0 +1,15 @@
+chore: ツールチェーンの依存関係を更新
+
+ツールチェーンのマイナーアップデートを適用します。
+
+| ツール | 現在のバージョン | ターゲットバージョン | 更新タイプ | 公式リリースノート |
+| --- | --- | --- | --- | --- |
+| `go` | `1.26.5` | `1.26.6` | patch | [Release notes](https://go.dev/doc/devel/release#go1.26) |
+| `pinact` | `4.1.0` | `4.1.1` | patch | [Release notes](https://github.com/suzuki-shunsuke/pinact/releases/tag/v4.1.1) |
+
+## 検証 (Verification)
+
+| コマンド | 結果 |
+| --- | --- |
+| `mise run check` | 成功 |
+| `mise run licenses:update` | 成功 (差分なし) |
