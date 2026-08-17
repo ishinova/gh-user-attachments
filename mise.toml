@@ -1,4 +1,4 @@
 [tools]
 actionlint = "1.7.12"
-go = "1.26.5"
-pinact = "4.1.0"
+go = "1.26.6"
+pinact = "4.1.1"
