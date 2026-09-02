@@ -1,8 +1,11 @@
 ---
 name: gh-user-attachments
-description: "Upload 2–10 supported local files to GitHub user attachments and return finalized canonical URLs in input order. Use for batch attachment uploads to GitHub issues, pull requests, comments, or discussions. Do not use for one file, Markdown generation, or editing GitHub content."
+description: "[DEPRECATED] Upload 2–10 supported local files to GitHub user attachments and return finalized canonical URLs in input order. GitHub CLI natively supports `--attach` on `gh issue` and `gh pr` commands; prefer official `--attach` instead. Use for batch attachment uploads to GitHub issues, pull requests, comments, or discussions. Do not use for one file, Markdown generation, or editing GitHub content."
 ---
 # GitHub user attachments
+
+> [!IMPORTANT]
+> **Deprecated:** GitHub CLI natively supports attaching files via the `--attach` flag on `gh issue` and `gh pr` commands (`create`, `edit`, `comment`). Prefer the official `--attach` capability over this extension. See https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli .
 
 Use private `gh user-attachments` extension. Uploads files only. Caller owns URL placement.
 
