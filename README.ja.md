@@ -1,5 +1,8 @@
 # gh-user-attachments
 
+> [!IMPORTANT]
+> **アーカイブ / 非推奨のお知らせ:** GitHub CLI が `gh issue` および `gh pr` コマンド（`create`, `edit`, `comment`）において `--attach` フラグによるファイル添付に公式対応しました。詳細は公式ドキュメント [Attaching files with GitHub CLI](https://docs.github.com/ja/github-cli/github-cli/attaching-files-with-github-cli)（または [英語版](https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli)）を参照してください。公式機能の提供に伴い、本リポジトリはアーカイブされ、メンテナンスを終了します。今後は公式の GitHub CLI 機能をご利用ください。
+
 [English README](README.md)
 
 `gh-user-attachments` は、複数のローカルファイルを GitHub の `user-attachments` へアップロードし、生成された `https://github.com/user-attachments/assets/<uuid>` URL を出力する GitHub CLI エクステンションです。

@@ -1,5 +1,8 @@
 # gh-user-attachments
 
+> [!IMPORTANT]
+> **Archived / Deprecated:** GitHub CLI now natively supports attaching files via the `--attach` flag across `gh issue` and `gh pr` commands (`create`, `edit`, `comment`). See the official documentation on [Attaching files with GitHub CLI](https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli). As official native support is now available, this repository is archived and no longer maintained. Please use the built-in `--attach` option in GitHub CLI instead.
+
 [日本語版 README](README.ja.md)
 
 `gh-user-attachments` is a GitHub CLI extension that uploads multiple local
